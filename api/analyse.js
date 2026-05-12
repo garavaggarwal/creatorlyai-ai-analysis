@@ -9,7 +9,7 @@ export const config = {
   },
 };
 
-const RAILWAY_URL = 'https://api.creatorlyai.in';
+const RAILWAY_URL = 'https://web-production-7bc95.up.railway.app';
 
 export default async function handler(req, res) {
   // Handle preflight

@@ -35,7 +35,7 @@ async function analyseText({ caption, hashtags, niche }) {
   const hasCTA = /\b(comment|share|save|follow|link in bio|click|dm|check|tag|tell me|what do you|let me know|drop a)\b/i.test(caption || '');
   const hasQuestion = /\?/.test(caption || '');
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20' });
 
   const prompt = `You are an Instagram content strategist. Analyse this caption and hashtags for an Instagram Reel in the "${niche}" niche.
 
