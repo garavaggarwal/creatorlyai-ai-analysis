@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Creatorly AI — Reel Analyser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://web-production-7bc95.up.railway.app/style.css" />
+</head>
+<body>
+
+  <!-- Animated BG -->
+  <div class="page-bg-grid"></div>
+  <div class="page-orb page-orb-1"></div>
+  <div class="page-orb page-orb-2"></div>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="/analyser" class="logo-link-analyser">
+        <div class="logo-mark-analyser">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <defs><linearGradient id="alg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs>
+            <rect width="32" height="32" rx="9" fill="url(#alg)"/>
+            <path d="M8 16 L14 10 L20 16 L26 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 22 L14 16 L20 22 L26 16" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-name-analyser">Creatorly <span class="logo-ai-analyser">AI</span></span>
+      </a>
+      <div class="header-center">
+        <span class="nav-pill">
+          <span class="nav-pill-dot"></span>
+          AI Analyser
+        </span>
+      </div>
+      <div id="headerAuth">
+        <a href="/login" class="btn-login" id="headerLoginBtn">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Trend-Aware · Gemini Vision AI
+    </div>
+    <h1 class="hero-title">Know if your reel<br /><span class="gradient-text">will actually go viral</span></h1>
+    <p class="hero-sub">Upload your reel or paste an Instagram link. Get a deep AI breakdown — hook strength, retention, audio sync, trend-fit score, captions and exact fixes in seconds.</p>
+  </section>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- ── UPLOAD CARD ── -->
+    <div class="card upload-card" id="uploadCard">
+
+      <!-- Tab switcher -->
+      <div class="input-tabs" role="tablist">
+        <button class="input-tab active" id="tabUpload" role="tab" aria-selected="true" aria-controls="panelUpload">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Upload Reel
+        </button>
+        <button class="input-tab" id="tabLink" role="tab" aria-selected="false" aria-controls="panelLink">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          Instagram Link
+        </button>
+      </div>
+
+      <form id="analyseForm">
+
+        <!-- ── Panel: Upload File ── -->
+        <div id="panelUpload" role="tabpanel">
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="videoInput" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska,video/x-m4v,video/mov,.mp4,.mov,.avi,.webm,.mkv,.m4v" hidden />
+            <div class="drop-icon-wrap">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="drop-svg-icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </div>
+            <p class="drop-title">Drop your reel here</p>
+            <p class="drop-sub">MP4, MOV, HEVC, WEBM · Max 500MB</p>
+            <button type="button" class="btn btn-outline" id="browseBtn">Browse file</button>
+            <div class="file-preview" id="filePreview" hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <span class="file-name" id="fileName"></span>
+              <span class="file-size" id="fileSize"></span>
+              <button type="button" class="remove-btn" id="removeFile">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Panel: Instagram Link ── -->
+        <div id="panelLink" role="tabpanel" hidden>
+          <div class="insta-url-wrap">
+            <div class="insta-url-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </div>
+            <input
+              type="url"
+              id="instaUrlInput"
+              class="insta-url-input"
+              placeholder="https://www.instagram.com/reel/ABC123.../"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" class="btn btn-outline insta-paste-btn" id="pasteUrlBtn">Paste</button>
+          </div>
+          <p class="insta-url-hint">⚡ Reel must be <strong>public</strong>. Copy the link from Instagram and paste it above.</p>
+        </div>
+
+        <!-- Shared: niche selector -->
+        <div class="meta-grid">
+          <div class="field">
+            <label for="nicheInput">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              Content Niche
+            </label>
+            <select id="nicheInput" name="niche">
+              <option value="general">General</option>
+              <option value="fitness">Fitness</option>
+              <option value="food">Food</option>
+              <option value="tech">Tech</option>
+              <option value="aesthetic">Aesthetic</option>
+              <option value="comedy">Comedy</option>
+              <option value="fashion">Fashion</option>
+              <option value="travel">Travel</option>
+              <option value="beauty">Beauty</option>
+              <option value="education">Education</option>
+              <option value="nature">Nature</option>
+              <option value="business">Business</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          <span class="btn-text">Analyse Reel</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- ── PROGRESS ── -->
+    <div class="card progress-card" id="progressCard" hidden>
+      <div class="progress-ring-wrap">
+        <svg class="progress-ring-svg" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="5"/>
+          <circle cx="40" cy="40" r="32" fill="none" stroke="url(#pg)" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" id="progressRingCircle" transform="rotate(-90 40 40)">
+            <defs><linearGradient id="pg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#22c55e"/></linearGradient></defs>
+          </circle>
+        </svg>
+        <div class="progress-ring-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+      </div>
+      <h3 class="progress-title">Analysing your reel…</h3>
+      <p class="progress-sub">Gemini Vision is reviewing every frame</p>
+      <div class="progress-steps">
+        <div class="step" id="step1">
+          <span class="step-dot"></span>
+          <span>Extracting frames</span>
+        </div>
+        <div class="step" id="step2">
+          <span class="step-dot"></span>
+          <span>Running AI analysis</span>
+        </div>
+        <div class="step" id="step3">
+          <span class="step-dot"></span>
+          <span>Scoring your content</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RESULTS ── -->
+    <div id="resultsSection" hidden>
+
+      <!-- Overall Score -->
+      <div class="card score-card">
+        <div class="score-left">
+          <div class="result-thumb-wrap" id="resultThumbWrap" hidden>
+            <img class="result-thumb" id="resultThumb" alt="Video thumbnail" />
+          </div>
+          <div class="score-ring" id="scoreRing">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="score-number" id="overallScore">—</div>
+          </div>
+          <div class="score-meta">
+            <div class="score-label">Overall Score</div>
+            <div class="score-verdict" id="scoreVerdict"></div>
+          </div>
+        </div>
+        <div class="score-right">
+          <div class="perf-badge" id="perfBadge"></div>
+          <p class="overall-summary" id="overallSummary"></p>
+        </div>
+      </div>
+
+      <!-- Video Summary -->
+      <div class="card summary-card" id="summaryCard" hidden>
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">What Your Video Is About</h3>
+        </div>
+        <p class="video-summary-text" id="videoSummaryText"></p>
+      </div>
+
+      <!-- Top Wins & Fixes -->
+      <div class="two-col">
+        <div class="card wins-card">
+          <div class="card-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <h3 class="card-title" style="margin-bottom:0">Top 3 Wins</h3>
+          </div>
+          <ul class="bullet-list wins-list" id="winsList"></ul>
+        </div>
+        <div class="card fixes-card">
+          <div class="card-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            <h3 class="card-title" style="margin-bottom:0">Top 3 Fixes</h3>
+          </div>
+          <ul class="bullet-list fixes-list" id="fixesList"></ul>
+        </div>
+      </div>
+
+      <!-- Score Breakdown -->
+      <div class="card breakdown-card">
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Score Breakdown</h3>
+        </div>
+        <!-- Horizontally scrollable score chips -->
+        <div class="breakdown-scroll" id="breakdownScroll"></div>
+        <!-- Detail card for selected metric -->
+        <div class="breakdown-detail" id="breakdownDetail" hidden></div>
+      </div>
+
+      <!-- Caption & Hashtags -->
+      <div class="two-col">
+        <div class="card" id="captionCard" hidden>
+          <div class="card-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <h3 class="card-title" style="margin-bottom:0">Caption Analysis</h3>
+          </div>
+          <div id="captionContent"></div>
+        </div>
+        <div class="card" id="hashtagCard" hidden>
+          <div class="card-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+            <h3 class="card-title" style="margin-bottom:0">Hashtag Analysis</h3>
+          </div>
+          <div id="hashtagContent"></div>
+        </div>
+      </div>
+
+      <!-- Suggested Captions & Hashtags -->
+      <div class="card suggestions-card" id="suggestionsCard" hidden>
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Suggested Captions & Hashtags</h3>
+        </div>
+        <div class="suggestions-grid">
+          <div class="suggestion-col" id="suggestedCaptionsCol" hidden>
+            <div class="suggestion-label-row">
+              <span class="suggestion-label">Caption Ideas</span>
+              <button class="copy-all-btn" id="copyAllCaptions">Copy All</button>
+            </div>
+            <div class="captions-scroll" id="suggestedCaptions"></div>
+          </div>
+          <div class="suggestion-col" id="suggestedHashtagsCol" hidden>
+            <div class="suggestion-label-row">
+              <span class="suggestion-label">Trending Hashtags</span>
+              <button class="copy-all-btn" id="copyAllHashtags">Copy All</button>
+            </div>
+            <div class="hashtags-scroll">
+              <div class="tag-list" id="suggestedHashtags"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Info -->
+      <div class="card video-info-card">
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Video Info</h3>
+        </div>
+        <div class="info-grid" id="videoInfoGrid"></div>
+      </div>
+
+      <!-- Video Player + Sync Timeline -->
+      <div class="card timeline-card" id="timelineCard" hidden>
+        <!-- Video Player (only shown when video is available in current session) -->
+        <div class="video-player-wrap" id="videoPlayerWrap" hidden>
+          <video class="video-player" id="videoPlayer" playsinline preload="metadata">
+            Your browser does not support the video tag.
+          </video>
+          <div class="video-controls">
+            <button class="video-play-btn" id="videoPlayBtn" aria-label="Play/Pause">
+              <svg class="play-icon" id="playIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <svg class="pause-icon" id="pauseIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </button>
+            <span class="video-time" id="videoTime">0:00 / 0:00</span>
+          </div>
+        </div>
+
+        <div class="timeline-header">
+          <div class="card-title-row" style="margin-bottom:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3 class="card-title" style="margin-bottom:0">Content Sync Timeline</h3>
+          </div>
+          <div class="sync-score-badge" id="syncScoreBadge"></div>
+        </div>
+        <p class="timeline-sub">Shows where video, audio and text are in sync — and where they're not.</p>
+        <div class="timeline-legend">
+          <span class="legend-item"><span class="legend-dot ok"></span> In Sync</span>
+          <span class="legend-item"><span class="legend-dot audio_issue"></span> Audio Issue</span>
+          <span class="legend-item"><span class="legend-dot text_issue"></span> Text Issue</span>
+          <span class="legend-item"><span class="legend-dot visual_issue"></span> Visual Issue</span>
+          <span class="legend-item"><span class="legend-dot scene_cut"></span> Scene Cut</span>
+          <span class="legend-item"><span class="legend-dot silence"></span> Silence</span>
+        </div>
+        <div class="timeline-wrap">
+          <div class="timeline-bar" id="timelineBar">
+            <div class="timeline-playhead" id="timelinePlayhead"></div>
+          </div>
+          <div class="timeline-markers" id="timelineMarkers"></div>
+          <div class="timeline-timestamps" id="timelineTimestamps"></div>
+        </div>
+        <div class="timeline-issues" id="timelineIssues"></div>
+      </div>
+
+      <!-- Analyse Another -->
+      <div class="cta-row">
+        <button class="btn btn-primary" id="analyseAnotherBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Analyse Another Reel
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── ERROR ── -->
+    <div class="card error-card" id="errorCard" hidden>
+      <div class="error-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <h3 class="error-title">Analysis failed</h3>
+      <p class="error-msg" id="errorMsg"></p>
+      <button class="btn btn-outline" id="retryBtn">Try Again</button>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>Powered by <strong>Creatorly AI</strong> · <a href="https://creatorlyai.in" target="_blank">creatorlyai.in</a></p>
+  </footer>
+
+  <!-- ── HISTORY SECTION (shown when History tab is active) ── -->
+  <section class="history-page" id="historyPage" hidden>
+    <div class="history-page-header">
+      <h2 class="history-page-title">Your Analyses</h2>
+      <p class="history-page-sub">Tap any analysis to view full results</p>
+    </div>
+    <div class="history-page-list" id="historyPageList">
+      <!-- Populated by JS -->
+    </div>
+    <div class="history-page-empty" id="historyPageEmpty" hidden>
+      <div class="empty-icon">📊</div>
+      <p>No analyses yet</p>
+      <p class="empty-sub">Upload your first reel to get started</p>
+    </div>
+  </section>
+
+  <!-- ── BOTTOM NAVIGATION (mobile) / LEFT SIDEBAR (desktop) ── -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bottom-nav-item" id="navHome" onclick="navigateTo('home')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="bottom-nav-item nav-center" id="navAnalyse" onclick="navigateTo('analyse')">
+      <div class="nav-plus-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <span>Analyse</span>
+    </button>
+    <button class="bottom-nav-item" id="navHistory" onclick="navigateTo('history')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>History</span>
+    </button>
+  </nav>
+
+  <!-- ── LEFT SIDEBAR (desktop only) ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <a href="/" class="sidebar-logo">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+          <defs><linearGradient id="slg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs>
+          <rect width="32" height="32" rx="9" fill="url(#slg)"/>
+          <path d="M8 16 L14 10 L20 16 L26 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 22 L14 16 L20 22 L26 16" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="sidebar-logo-text">Creatorly <span class="sidebar-logo-ai">AI</span></span>
+      </a>
+      <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+      </button>
+    </div>
+    <div class="sidebar-nav">
+      <button class="sidebar-item" id="sideNavHome" onclick="navigateTo('home')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="sidebar-item active" id="sideNavAnalyse" onclick="navigateTo('analyse')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        <span>New Analysis</span>
+      </button>
+      <button class="sidebar-item" id="sideNavHistory" onclick="navigateTo('history')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>History</span>
+      </button>
+    </div>
+    <div class="sidebar-bottom" id="sidebarUser">
+      <!-- User info injected by JS -->
+    </div>
+  </aside>
+
+  <script src="https://web-production-7bc95.up.railway.app/auth.js"></script>
+  <script src="https://web-production-7bc95.up.railway.app/app.js"></script>
+</body>
+</html>

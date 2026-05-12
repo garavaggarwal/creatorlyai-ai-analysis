@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creatorly AI — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://web-production-7bc95.up.railway.app/login.css" />
+</head>
+<body>
+
+  <div class="login-layout">
+
+    <!-- ── LEFT PANEL ── -->
+    <div class="left-panel">
+      <div class="left-bg"></div>
+      <div class="left-orb left-orb-1"></div>
+      <div class="left-orb left-orb-2"></div>
+      <div class="left-grid"></div>
+
+      <a href="/" class="left-logo">
+        <div class="left-logo-mark">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs>
+            <rect width="32" height="32" rx="9" fill="url(#lg)"/>
+            <path d="M8 16 L14 10 L20 16 L26 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 22 L14 16 L20 22 L26 16" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="left-logo-name">Creatorly <span class="left-logo-ai">AI</span></span>
+      </a>
+
+      <div class="left-content">
+        <div class="left-badge"><span class="left-badge-dot"></span>AI-Powered Reel Analysis</div>
+        <h1 class="left-title">Stop guessing.<br/><span class="left-gradient" id="leftTyped"></span><span class="left-cursor">|</span></h1>
+        <p class="left-sub">Upload any reel. Get your <strong>hook score, trend-fit, captions</strong> and exact fixes in <strong>60 seconds</strong>. Built for Indian creators.</p>
+
+        <!-- Reel mockups with growing stats -->
+        <div class="reels-showcase">
+          <!-- Reel 1 -->
+          <div class="reel-card reel-card-1">
+            <div class="reel-thumb" style="background:linear-gradient(135deg,#1a0533,#2d1b69)">
+              <div class="reel-play-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+              </div>
+              <div class="reel-duration">0:28</div>
+              <div class="reel-niche-tag">Travel</div>
+            </div>
+            <div class="reel-stats">
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                <span class="reel-stat-num" data-target="2100000" data-suffix="M">0</span>
+              </div>
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                <span class="reel-stat-num" data-target="48000" data-suffix="K">0</span>
+              </div>
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                <span class="reel-stat-num" data-target="312000" data-suffix="K">0</span>
+              </div>
+            </div>
+            <div class="reel-score-pill">Score: <strong>9.1</strong></div>
+          </div>
+
+          <!-- Reel 2 -->
+          <div class="reel-card reel-card-2">
+            <div class="reel-thumb" style="background:linear-gradient(135deg,#0f2027,#203a43,#2c5364)">
+              <div class="reel-play-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+              </div>
+              <div class="reel-duration">0:15</div>
+              <div class="reel-niche-tag">Fitness</div>
+            </div>
+            <div class="reel-stats">
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                <span class="reel-stat-num" data-target="890000" data-suffix="K">0</span>
+              </div>
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                <span class="reel-stat-num" data-target="23000" data-suffix="K">0</span>
+              </div>
+              <div class="reel-stat">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                <span class="reel-stat-num" data-target="156000" data-suffix="K">0</span>
+              </div>
+            </div>
+            <div class="reel-score-pill">Score: <strong>8.7</strong></div>
+          </div>
+
+          <!-- Floating notification removed -->
+        </div>
+
+        <!-- Stats row below reels -->
+        <div class="left-stats-row">
+          <div class="left-stat-item">
+            <div class="left-stat-num">10K+</div>
+            <div class="left-stat-label">Reels Analysed</div>
+          </div>
+          <div class="left-stat-divider"></div>
+          <div class="left-stat-item">
+            <div class="left-stat-num">4.9★</div>
+            <div class="left-stat-label">Creator Rating</div>
+          </div>
+          <div class="left-stat-divider"></div>
+          <div class="left-stat-item">
+            <div class="left-stat-num">2x</div>
+            <div class="left-stat-label">Avg. Reach Growth</div>
+          </div>
+        </div>
+
+        <!-- AI Analysis progress card -->
+        <div class="left-analysis-card">
+          <div class="left-analysis-header">
+            <div class="left-analysis-dot"></div>
+            <span>AI Analysing your reel...</span>
+          </div>
+          <div class="left-analysis-steps">
+            <div class="las las-done">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Extracting frames</span>
+              <span class="las-val" style="color:#22c55e">Done</span>
+            </div>
+            <div class="las las-done">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Hook strength scored</span>
+              <span class="las-val" style="color:#22c55e">9.1 / 10</span>
+            </div>
+            <div class="las las-active">
+              <div class="las-spinner"></div>
+              <span>Trend-fit analysis</span>
+              <span class="las-val" style="color:#a855f7">Running...</span>
+            </div>
+            <div class="las las-pending">
+              <div class="las-pending-dot"></div>
+              <span>Generating captions</span>
+              <span class="las-val">Pending</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-quote">
+        <p id="quoteText"></p>
+        <span id="quoteAuthor"></span>
+      </div>
+    </div>
+
+    <!-- ── RIGHT PANEL ── -->
+    <div class="right-panel">
+      <!-- Mobile-only fixed top bar (replaces broken CSS ::after pseudo-element) -->
+      <a href="https://creatorlyai.in" class="mobile-top-bar">
+        <span class="mobile-top-bar-text">Creatorly AI</span>
+      </a>
+      <div class="bg-particles" id="bgParticles"></div>
+
+      <div class="auth-wrap">
+
+        <!-- Welcome heading -->
+        <div class="auth-heading">
+          <h2 class="auth-title" id="authTitle">Welcome back</h2>
+          <p class="auth-subtitle" id="authSubtitle">Login to analyse your reels and grow faster</p>
+        </div>
+
+        <div class="tab-bar">
+          <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+          <button class="tab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+          <div class="tab-indicator" id="tabIndicator"></div>
+        </div>
+
+        <!-- LOGIN -->
+        <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Email address</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <input type="email" placeholder="you@example.com" required autocomplete="email" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <input type="password" id="loginPassword" placeholder="Enter your password" required />
+              <button type="button" class="eye-btn" onclick="togglePassword('loginPassword', this)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="forgot-row"><a href="#" class="forgot-link">Forgot password?</a></div>
+          <button type="submit" class="btn-auth">
+            <span class="btn-auth-text">Login</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </form>
+
+        <!-- SIGNUP -->
+        <form class="auth-form hidden" id="signupForm" onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" placeholder="Your name" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email address</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <input type="email" placeholder="you@example.com" required autocomplete="email" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <input type="password" id="signupPassword" placeholder="Create a strong password" required />
+              <button type="button" class="eye-btn" onclick="togglePassword('signupPassword', this)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Instagram Username</label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+              <input type="text" placeholder="@yourhandle" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number <span class="optional-tag">optional</span></label>
+            <div class="input-wrap">
+              <svg class="input-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              <input type="tel" placeholder="+91 98765 43210" />
+            </div>
+          </div>
+          <button type="submit" class="btn-auth">
+            <span class="btn-auth-text">Create Account</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </form>
+
+        <div class="divider"><span>or continue with</span></div>
+
+        <div class="social-btns">
+          <button class="social-btn google" onclick="socialLogin('Google')">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Google
+          </button>
+          <button class="social-btn instagram" onclick="socialLogin('Instagram')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><radialGradient id="ig2" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig2)"/><circle cx="12" cy="12" r="4" stroke="white" stroke-width="1.5" fill="none"/><circle cx="17.5" cy="6.5" r="1" fill="white"/></svg>
+            Instagram
+          </button>
+          <button class="social-btn facebook" onclick="socialLogin('Facebook')">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+            Facebook
+          </button>
+        </div>
+
+        <p class="switch-text" id="switchText">
+          Don't have an account? <a href="#" onclick="switchTab('signup'); return false;">Sign up free</a>
+        </p>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <script src="https://web-production-7bc95.up.railway.app/auth.js"></script>
+  <script src="https://web-production-7bc95.up.railway.app/login.js"></script>
+</body>
+</html>
