@@ -52,6 +52,10 @@
       "dest": "/public/landing.js"
     },
     {
+      "src": "/auth.js",
+      "dest": "/public/auth.js"
+    },
+    {
       "src": "/",
       "dest": "/public/landing.html"
     }
