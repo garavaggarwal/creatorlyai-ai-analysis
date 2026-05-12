@@ -66,6 +66,7 @@ app.use(cors({
     const allowed = [
       'https://creatorlyai.in',
       'https://www.creatorlyai.in',
+      'https://api.creatorlyai.in',
       'http://localhost:3000',
       'http://localhost:3001',
     ];
