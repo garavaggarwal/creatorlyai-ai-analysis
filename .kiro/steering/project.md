@@ -205,12 +205,13 @@ When a user locks their screen or loses connection mid-analysis:
 - Fixed 240px sidebar with logo, nav items, and user info at bottom
 - **Collapsible**: toggle button collapses to 64px (icons only), state persisted in localStorage
 - Top header is hidden on desktop (sidebar has the logo)
-- Nav items: Home (→ landing), New Analysis, History
+- Nav items: Home (→ landing), New Analysis, History, Profile (→ `/profile`)
 - Active state highlighted with color-coded border
 
 ### Mobile (<1024px) — Bottom Navigation
-- Fixed bottom nav bar with 3 tabs: Home, Analyse (+), History
+- Fixed bottom nav bar with 4 items: Home, Analyse (+), History, Profile
 - Centre "Analyse" button has elevated purple circle design
+- Profile link navigates to `/profile` page
 - Bottom nav hidden on desktop
 
 ### Navigation Logic (`navigateTo()`)
@@ -279,27 +280,43 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 - Requires `APIFY_API_TOKEN` env var
 - Returns profile data + calculated metrics (~15–30 seconds)
 
-### Metrics Calculated:
-1. **Follower Count** — total followers
-2. **Avg Views/Reel** — mean views across last 12 reels
-3. **Avg Likes/Reel** — mean likes across last 12 reels
-4. **Avg Comments/Reel** — mean comments across last 12 reels
-5. **Engagement Rate** — (avg likes + avg comments) ÷ followers × 100
-6. **Posting Frequency** — reels posted in last 30 days
-7. **Top Hashtags** — most used hashtags from captions, clustered by frequency
+### 8 Metrics Calculated (from last 10 reels):
+1. **Avg Reel Views** — mean views across last 10 reels
+2. **Avg Likes** — mean likes across last 10 reels
+3. **Avg Comments** — mean comments across last 10 reels
+4. **Avg Shares** — mean shares across last 10 reels (virality indicator)
+5. **Avg Saves** — mean saves across last 10 reels (content value signal)
+6. **ER by Followers (%)** — (Likes+Comments+Shares+Saves) ÷ Followers × 100
+7. **ER by Views (%)** — (Likes+Comments+Shares+Saves) ÷ Views × 100
+8. **Reach Efficiency** — Views ÷ Followers (shows as multiplier like 2.5x)
 
 ### Frontend Components:
-- Profile header (avatar, name, bio, verified badge, business category)
-- Stats row (followers, following, posts)
-- Key metrics grid (6 metric cards with color-coded values)
-- Views & likes trend bar chart (last 12 posts)
-- Top hashtags cloud
-- Recent posts grid with thumbnails and engagement stats
+- **Blurred preview + unlock card** — shown on first visit (no username saved)
+- **Skeleton loading** — pulsing card placeholders while data loads (no spinner)
+- Profile header (avatar fallback, name, bio, verified badge, niche tag, edit button)
+- Stats row (followers + total posts only, no following)
+- Key metrics grid (8 metric cards with color-coded values)
+- Views & likes trend bar chart (last 10 posts)
+- Recent posts grid with emoji fallbacks (Instagram CDN blocks cross-origin images) — clickable → opens Instagram
+- **Change username popup** — edit icon next to profile name opens a modal with blurred backdrop, input for new username, Update button, and ✕ close button
+
+### Niche Detection:
+- Auto-detected from bio text + recent captions using keyword matching
+- 12 categories: Fitness, Travel, Food, Tech, Fashion, Beauty, Comedy, Education, Business, Music, Photography, Lifestyle
+- Falls back to Instagram business category if available
+
+### Username Persistence:
+- Saved in `localStorage` as `creatorly_ig_username`
+- Auto-fetches on return visits (shows skeleton loading)
+- Change via edit popup → saves new username → re-fetches
 
 ### Files:
-- `public/profile.html` — page structure
-- `public/profile.css` — profile-specific styles
+- `public/profile.html` — page structure (blurred preview, skeleton, results, popup)
+- `public/profile.css` — profile-specific styles (skeleton animation, popup overlay)
 - `public/profile.js` — fetch + render logic
+
+### CSS Note:
+- `.popup-overlay[hidden] { display: none }` — required because `display: flex` overrides the HTML `hidden` attribute
 
 ---
 
@@ -327,9 +344,10 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 - Marketing landing page with hero, live demo section, how-it-works, features grid, testimonials carousel, CTA
 
 ### `/profile` (profile.html + profile.js + profile.css)
-- Username input with @ prefix
-- Fetches profile data via Apify (15–30 second load time)
-- Displays: profile header, key metrics grid, views/likes trend chart, top hashtags cloud, recent posts grid
+- First visit: blurred preview cards + unlock overlay (enter username)
+- Return visits: skeleton loading animation → auto-fetches saved username
+- Displays: profile header (with edit button), 8 key metrics, views/likes trend chart, recent posts (clickable → Instagram)
+- Change username popup: edit icon → blurred modal → enter new username → Update
 - Bottom nav with Profile tab active
 - Auth required (redirects to login if not logged in)
 
@@ -349,7 +367,7 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 
 ## Kiro Hooks
 
-A Kiro `agentStop` hook exists at `.kiro/hooks/update-steering-on-stop.kiro.hook` but is **disabled** (`"enabled": false`). Steering file updates are done manually on request.
+No active hooks. The `agentStop` hook for auto-updating the steering file has been removed. Steering file updates are done manually on request only.
 
 ---
 
