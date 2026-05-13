@@ -102,7 +102,35 @@ function renderSidebarUser() {
 document.addEventListener('DOMContentLoaded', () => {
   renderHeaderUser();
   renderSidebarUser();
+  fetchCredits();
 });
+
+/* ── Credits bar ── */
+async function fetchCredits() {
+  const creditsBar = document.getElementById('creditsBar');
+  if (!creditsBar) return;
+  const session = typeof getRawSession === 'function' ? getRawSession() : null;
+  const token = session?.access_token;
+  if (!token) return;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/usage`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!resp.ok) return;
+    const json = await resp.json();
+    if (!json.success) return;
+
+    const used = json.usage?.used || 0;
+    const limit = json.usage?.limit || 5;
+    const remaining = Math.max(0, limit - used);
+    const pct = Math.min(100, (used / limit) * 100);
+
+    document.getElementById('creditsCount').textContent = `${used} used / ${limit} available`;
+    document.getElementById('creditsFill').style.width = pct + '%';
+    creditsBar.hidden = false;
+  } catch (_) {}
+}
 
 /* ── DOM refs ── */
 const dropZone          = document.getElementById('dropZone');
