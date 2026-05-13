@@ -278,6 +278,34 @@ app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
+// ─── Niche detection helper ───────────────────────────────────────────────────
+function detectNiche(bioText, posts) {
+  const nicheKeywords = {
+    'Fitness': ['fitness', 'gym', 'workout', 'health', 'muscle', 'bodybuilding', 'yoga'],
+    'Travel': ['travel', 'wanderlust', 'explore', 'adventure', 'traveller', 'traveler', 'nomad'],
+    'Food': ['food', 'recipe', 'cooking', 'chef', 'foodie', 'kitchen', 'baking'],
+    'Tech': ['tech', 'coding', 'developer', 'software', 'startup', 'ai', 'gadget'],
+    'Fashion': ['fashion', 'style', 'outfit', 'clothing', 'model', 'designer'],
+    'Beauty': ['beauty', 'makeup', 'skincare', 'cosmetics', 'hair'],
+    'Comedy': ['comedy', 'funny', 'humor', 'memes', 'jokes', 'entertainment'],
+    'Education': ['education', 'learn', 'teach', 'study', 'knowledge', 'mentor'],
+    'Business': ['business', 'entrepreneur', 'startup', 'marketing', 'finance', 'money'],
+    'Music': ['music', 'singer', 'musician', 'artist', 'song', 'band'],
+    'Photography': ['photography', 'photographer', 'photo', 'camera', 'portrait'],
+    'Lifestyle': ['lifestyle', 'daily', 'vlog', 'life', 'motivation', 'inspiration'],
+  };
+
+  const allText = bioText + ' ' + posts.slice(0, 5).map(p => (p.caption || p.text || '').toLowerCase()).join(' ');
+
+  let bestNiche = 'General';
+  let bestScore = 0;
+  for (const [niche, keywords] of Object.entries(nicheKeywords)) {
+    const score = keywords.filter(k => allText.includes(k)).length;
+    if (score > bestScore) { bestScore = score; bestNiche = niche; }
+  }
+  return bestNiche;
+}
+
 // ─── Profile Analytics API ────────────────────────────────────────────────────
 app.post('/api/profile-analytics', async (req, res) => {
   const { username } = req.body || {};
@@ -325,50 +353,42 @@ app.post('/api/profile-analytics', async (req, res) => {
     // Extract recent posts/reels for metrics calculation
     const posts = profile.latestPosts || profile.posts || profile.recentPosts || [];
     const reels = posts.filter(p => p.type === 'Video' || p.videoUrl || p.isVideo || p.productType === 'clips');
-    const recentPosts = posts.slice(0, 12); // Last 12 posts for averages
+    const last10 = posts.slice(0, 10); // Last 10 posts for averages
 
-    // Calculate metrics
+    // Basic counts
     const followersCount = profile.followersCount || profile.followers || profile.follower_count || 0;
-    const followingCount = profile.followsCount || profile.following || profile.following_count || 0;
     const postsCount = profile.postsCount || profile.posts_count || profile.mediaCount || 0;
 
-    // Avg views, likes, comments from recent posts
-    const viewCounts = recentPosts.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
-    const likeCounts = recentPosts.map(p => p.likesCount || p.likes || p.like_count || 0);
-    const commentCounts = recentPosts.map(p => p.commentsCount || p.comments || p.comment_count || 0);
+    // Extract metrics from last 10 posts
+    const viewCounts = last10.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
+    const likeCounts = last10.map(p => p.likesCount || p.likes || p.like_count || 0);
+    const commentCounts = last10.map(p => p.commentsCount || p.comments || p.comment_count || 0);
+    const shareCounts = last10.map(p => p.sharesCount || p.shares || p.share_count || 0);
+    const saveCounts = last10.map(p => p.savesCount || p.saves || p.save_count || 0);
 
     const avgViews = viewCounts.length > 0 ? Math.round(viewCounts.reduce((a, b) => a + b, 0) / viewCounts.length) : 0;
     const avgLikes = likeCounts.length > 0 ? Math.round(likeCounts.reduce((a, b) => a + b, 0) / likeCounts.length) : 0;
     const avgComments = commentCounts.length > 0 ? Math.round(commentCounts.reduce((a, b) => a + b, 0) / commentCounts.length) : 0;
+    const avgShares = shareCounts.length > 0 ? Math.round(shareCounts.reduce((a, b) => a + b, 0) / shareCounts.length) : 0;
+    const avgSaves = saveCounts.length > 0 ? Math.round(saveCounts.reduce((a, b) => a + b, 0) / saveCounts.length) : 0;
 
-    // Engagement rate (cap at 100% for sanity)
-    const rawER = followersCount > 0 ? ((avgLikes + avgComments) / followersCount * 100) : 0;
-    const engagementRate = Math.min(rawER, 100).toFixed(2);
+    // Engagement Rate by Followers (%)
+    const totalEngagement = avgLikes + avgComments + avgShares + avgSaves;
+    const erByFollowers = followersCount > 0 ? Math.min(((totalEngagement) / followersCount * 100), 100).toFixed(2) : '0.00';
 
-    // Posting frequency (posts in last 30 days)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentPostsLast30 = posts.filter(p => {
-      const ts = new Date(p.timestamp || p.taken_at || p.date || 0);
-      return ts > thirtyDaysAgo;
-    });
-    const postingFrequency = recentPostsLast30.length;
+    // Engagement Rate by Views (%)
+    const erByViews = avgViews > 0 ? Math.min(((totalEngagement) / avgViews * 100), 100).toFixed(2) : '0.00';
 
-    // Top hashtags
-    const allHashtags = [];
-    posts.forEach(p => {
-      const caption = p.caption || p.text || '';
-      const tags = caption.match(/#[\w\u0900-\u097F]+/g) || [];
-      allHashtags.push(...tags.map(t => t.toLowerCase()));
-    });
-    const hashtagCounts = {};
-    allHashtags.forEach(t => { hashtagCounts[t] = (hashtagCounts[t] || 0) + 1; });
-    const topHashtags = Object.entries(hashtagCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15)
-      .map(([tag, count]) => ({ tag, count }));
+    // Reach Efficiency
+    const reachEfficiency = followersCount > 0 ? (avgViews / followersCount).toFixed(2) : '0.00';
+
+    // Niche detection from bio + captions
+    const bioText = (profile.biography || profile.bio || '').toLowerCase();
+    const businessCat = profile.businessCategoryName || profile.category || '';
+    const niche = businessCat || detectNiche(bioText, posts);
 
     // Views trend (per post, chronological)
-    const viewsTrend = recentPosts.slice().reverse().map(p => ({
+    const viewsTrend = last10.slice().reverse().map(p => ({
       views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
       likes: p.likesCount || p.likes || p.like_count || 0,
       date: p.timestamp || p.taken_at || p.date || null,
@@ -381,34 +401,38 @@ app.post('/api/profile-analytics', async (req, res) => {
       profilePicUrl: profile.profilePicUrl || profile.profilePicUrlHD || profile.profile_pic_url || '',
       isVerified: profile.verified || profile.isVerified || false,
       isBusinessAccount: profile.isBusinessAccount || profile.is_business || false,
-      businessCategory: profile.businessCategoryName || profile.category || '',
+      businessCategory: businessCat,
+      niche,
       externalUrl: profile.externalUrl || profile.external_url || '',
 
       // Key metrics
       followersCount,
-      followingCount,
       postsCount,
       avgViews,
       avgLikes,
       avgComments,
-      engagementRate: parseFloat(engagementRate),
-      postingFrequency,
+      avgShares,
+      avgSaves,
+      erByFollowers: parseFloat(erByFollowers),
+      erByViews: parseFloat(erByViews),
+      reachEfficiency: parseFloat(reachEfficiency),
       viewsTrend,
 
-      // Raw post data for frontend charts
-      recentPosts: recentPosts.slice(0, 12).map(p => ({
+      // Raw post data for frontend
+      recentPosts: last10.map(p => ({
         caption: (p.caption || p.text || '').slice(0, 100),
         likes: p.likesCount || p.likes || p.like_count || 0,
         comments: p.commentsCount || p.comments || p.comment_count || 0,
         views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+        shares: p.sharesCount || p.shares || p.share_count || 0,
+        saves: p.savesCount || p.saves || p.save_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,
         type: p.type || (p.videoUrl ? 'Video' : 'Image'),
-        thumbnailUrl: p.displayUrl || p.thumbnail_url || p.url || '',
         postUrl: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '')),
       })),
     };
 
-    console.log(`✅ Profile analytics done for @${cleanUsername}. Followers: ${followersCount}, ER: ${engagementRate}%`);
+    console.log(`✅ Profile analytics done for @${cleanUsername}. Followers: ${followersCount}, ER: ${erByFollowers}%`);
     res.json({ success: true, profile: result });
 
   } catch (err) {

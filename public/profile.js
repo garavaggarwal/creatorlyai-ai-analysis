@@ -106,62 +106,70 @@ function renderProfile(p) {
 
   // Tags
   const tags = [];
-  if (p.isBusinessAccount) tags.push(p.businessCategory || 'Business');
+  if (p.niche && p.niche !== 'General') tags.push(p.niche);
+  if (p.isBusinessAccount && p.businessCategory) tags.push(p.businessCategory);
   if (p.isVerified) tags.push('Verified');
   document.getElementById('profileTags').innerHTML = tags.map(t =>
     `<span class="profile-tag">${t}</span>`
   ).join('');
 
-  // Stats row
+  // Stats row (Followers + Posts only, no Following)
   document.getElementById('profileStatsRow').innerHTML = `
     <div class="profile-stat">
       <div class="profile-stat-value">${formatNum(p.followersCount)}</div>
       <div class="profile-stat-label">Followers</div>
     </div>
     <div class="profile-stat">
-      <div class="profile-stat-value">${formatNum(p.followingCount)}</div>
-      <div class="profile-stat-label">Following</div>
-    </div>
-    <div class="profile-stat">
       <div class="profile-stat-value">${formatNum(p.postsCount)}</div>
-      <div class="profile-stat-label">Posts</div>
+      <div class="profile-stat-label">Total Posts</div>
     </div>
   `;
 
-  // Key Metrics
-  const erClass = p.engagementRate >= 3 ? 'high' : p.engagementRate >= 1 ? 'mid' : 'low';
-  const freqClass = p.postingFrequency >= 12 ? 'high' : p.postingFrequency >= 4 ? 'mid' : 'low';
+  // Key Metrics — 8 exact metrics
+  const erFollowersClass = p.erByFollowers >= 3 ? 'high' : p.erByFollowers >= 1 ? 'mid' : 'low';
+  const erViewsClass = p.erByViews >= 10 ? 'high' : p.erByViews >= 5 ? 'mid' : 'low';
+  const reachClass = p.reachEfficiency >= 1 ? 'high' : p.reachEfficiency >= 0.3 ? 'mid' : 'low';
 
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-item">
       <div class="metric-value">${formatNum(p.avgViews)}</div>
-      <div class="metric-label">Avg Views/Reel</div>
-      <div class="metric-desc">Mean views across last 12 reels</div>
+      <div class="metric-label">Avg Reel Views</div>
+      <div class="metric-desc">Last 10 reels avg reach</div>
     </div>
     <div class="metric-item">
       <div class="metric-value">${formatNum(p.avgLikes)}</div>
-      <div class="metric-label">Avg Likes/Reel</div>
-      <div class="metric-desc">Passive approval signal</div>
+      <div class="metric-label">Avg Likes</div>
+      <div class="metric-desc">Audience approval signal</div>
     </div>
     <div class="metric-item">
       <div class="metric-value">${formatNum(p.avgComments)}</div>
       <div class="metric-label">Avg Comments</div>
-      <div class="metric-desc">Conversation & reaction</div>
+      <div class="metric-desc">Community interaction</div>
     </div>
     <div class="metric-item">
-      <div class="metric-value ${erClass}">${p.engagementRate}%</div>
-      <div class="metric-label">Engagement Rate</div>
-      <div class="metric-desc">(Likes + Comments) ÷ Followers</div>
+      <div class="metric-value">${formatNum(p.avgShares)}</div>
+      <div class="metric-label">Avg Shares</div>
+      <div class="metric-desc">Virality indicator</div>
     </div>
     <div class="metric-item">
-      <div class="metric-value ${freqClass}">${p.postingFrequency}</div>
-      <div class="metric-label">Posts/30 Days</div>
-      <div class="metric-desc">Posting consistency</div>
+      <div class="metric-value">${formatNum(p.avgSaves)}</div>
+      <div class="metric-label">Avg Saves</div>
+      <div class="metric-desc">Content value signal</div>
     </div>
     <div class="metric-item">
-      <div class="metric-value">${formatNum(p.followersCount)}</div>
-      <div class="metric-label">Followers</div>
-      <div class="metric-desc">Total audience size</div>
+      <div class="metric-value ${erFollowersClass}">${p.erByFollowers}%</div>
+      <div class="metric-label">ER by Followers</div>
+      <div class="metric-desc">Engagement ÷ Followers</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-value ${erViewsClass}">${p.erByViews}%</div>
+      <div class="metric-label">ER by Views</div>
+      <div class="metric-desc">Engagement ÷ Views</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-value ${reachClass}">${p.reachEfficiency}x</div>
+      <div class="metric-label">Reach Efficiency</div>
+      <div class="metric-desc">Views ÷ Followers</div>
     </div>
   `;
 
