@@ -121,11 +121,11 @@ async function fetchProfile(username) {
 }
 
 function renderProfile(p) {
-  // Avatar — use fallback gradient if image fails
+  // Avatar — use proxy to bypass CORS, fallback to initial
   const avatar = document.getElementById('profileAvatar');
   const avatarFallback = document.getElementById('profileAvatarFallback');
   if (p.profilePicUrl) {
-    avatar.src = p.profilePicUrl;
+    avatar.src = `${API_BASE}/api/image-proxy?url=${encodeURIComponent(p.profilePicUrl)}`;
     avatar.style.display = 'block';
     avatarFallback.style.display = 'none';
     avatar.onerror = () => { avatar.style.display = 'none'; avatarFallback.style.display = 'flex'; };
@@ -214,13 +214,17 @@ function renderProfile(p) {
   // Chart
   renderChart(p.viewsTrend);
 
-  // Recent Posts — clickable to Instagram, with fallback for broken images
+  // Recent Posts — clickable to Instagram, with thumbnail images
   document.getElementById('postsGrid').innerHTML = (p.recentPosts || []).map(post => {
     const link = post.postUrl || `https://www.instagram.com/${p.username}/`;
+    const thumbSrc = post.thumbnailUrl ? `${API_BASE}/api/image-proxy?url=${encodeURIComponent(post.thumbnailUrl)}` : '';
+    const thumbHtml = thumbSrc
+      ? `<img class="post-thumb-img" src="${thumbSrc}" alt="Post" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="post-thumb-fallback" style="display:none">${post.type === 'Video' ? '🎬' : '📷'}</div>`
+      : `<div class="post-thumb-fallback">${post.type === 'Video' ? '🎬' : '📷'}</div>`;
     return `
       <a href="${link}" target="_blank" rel="noopener" class="post-item">
         <div class="post-thumb-wrap">
-          <div class="post-thumb-fallback">${post.type === 'Video' ? '🎬' : '📷'}</div>
+          ${thumbHtml}
         </div>
         <div class="post-stats">
           <span class="post-stat">❤️ ${formatNum(post.likes)}</span>

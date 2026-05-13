@@ -169,6 +169,23 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Creatorly Video Lab API', timestamp: new Date().toISOString() });
 });
 
+// ─── Image proxy (bypass CORS for Instagram CDN images) ───────────────────────
+app.get('/api/image-proxy', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send('No URL');
+  try {
+    const https = require('https');
+    const http = require('http');
+    const protocol = url.startsWith('https') ? https : http;
+    protocol.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (proxyRes) => {
+      if (proxyRes.statusCode !== 200) return res.status(proxyRes.statusCode).send('Failed');
+      res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      proxyRes.pipe(res);
+    }).on('error', () => res.status(500).send('Proxy error'));
+  } catch (_) { res.status(500).send('Error'); }
+});
+
 // ─── Extract user ID from Supabase JWT (no external lib needed) ───────────────
 function extractUserId(req) {
   try {
@@ -428,6 +445,7 @@ app.post('/api/profile-analytics', async (req, res) => {
         saves: p.savesCount || p.saves || p.save_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,
         type: p.type || (p.videoUrl ? 'Video' : 'Image'),
+        thumbnailUrl: p.displayUrl || p.thumbnailUrl || p.thumbnail_src || p.imageUrl || p.display_url || '',
         postUrl: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '')),
       })),
     };
