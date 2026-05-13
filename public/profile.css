@@ -343,3 +343,107 @@
   line-height: 1.5;
   margin-bottom: 24px;
 }
+
+
+/* ── Skeleton Loading ── */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.skeleton-card { padding: 24px; }
+.skeleton-header { display: flex; gap: 14px; margin-bottom: 20px; }
+.skeleton-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--bg3);
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--bg3);
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+.skeleton-line.w30 { width: 30%; }
+.skeleton-line.w40 { width: 40%; }
+.skeleton-line.w60 { width: 60%; }
+.skeleton-line.w80 { width: 80%; }
+.skeleton-stats {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.skeleton-stat {
+  width: 60px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg3);
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.skeleton-metric {
+  height: 80px;
+  border-radius: var(--radius-sm);
+  background: var(--bg3);
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+.skeleton-chart {
+  height: 160px;
+  border-radius: var(--radius-sm);
+  background: var(--bg3);
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+.skeleton-hint {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  margin-top: 16px;
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+/* ── Post Thumb Fallback ── */
+.post-thumb-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--bg3), rgba(124,58,237,0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.post-thumb-fallback {
+  font-size: 1.5rem;
+  opacity: 0.6;
+}
+.post-item {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.post-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent2);
+}
+
+/* ── Avatar Fallback ── */
+.profile-avatar-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}

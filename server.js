@@ -341,8 +341,9 @@ app.post('/api/profile-analytics', async (req, res) => {
     const avgLikes = likeCounts.length > 0 ? Math.round(likeCounts.reduce((a, b) => a + b, 0) / likeCounts.length) : 0;
     const avgComments = commentCounts.length > 0 ? Math.round(commentCounts.reduce((a, b) => a + b, 0) / commentCounts.length) : 0;
 
-    // Engagement rate
-    const engagementRate = followersCount > 0 ? ((avgLikes + avgComments) / followersCount * 100).toFixed(2) : 0;
+    // Engagement rate (cap at 100% for sanity)
+    const rawER = followersCount > 0 ? ((avgLikes + avgComments) / followersCount * 100) : 0;
+    const engagementRate = Math.min(rawER, 100).toFixed(2);
 
     // Posting frequency (posts in last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -392,7 +393,6 @@ app.post('/api/profile-analytics', async (req, res) => {
       avgComments,
       engagementRate: parseFloat(engagementRate),
       postingFrequency,
-      topHashtags,
       viewsTrend,
 
       // Raw post data for frontend charts
@@ -404,6 +404,7 @@ app.post('/api/profile-analytics', async (req, res) => {
         date: p.timestamp || p.taken_at || p.date || null,
         type: p.type || (p.videoUrl ? 'Video' : 'Image'),
         thumbnailUrl: p.displayUrl || p.thumbnail_url || p.url || '',
+        postUrl: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '')),
       })),
     };
 

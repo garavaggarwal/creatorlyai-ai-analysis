@@ -16,7 +16,7 @@ const API_BASE = 'https://web-production-7bc95.up.railway.app';
 const profileForm = document.getElementById('profileForm');
 const usernameInput = document.getElementById('usernameInput');
 const blurredPreview = document.getElementById('blurredPreview');
-const profileLoading = document.getElementById('profileLoading');
+const skeletonLoading = document.getElementById('skeletonLoading');
 const profileResults = document.getElementById('profileResults');
 const profileError = document.getElementById('profileError');
 const profileErrorMsg = document.getElementById('profileErrorMsg');
@@ -25,8 +25,9 @@ const profileRetryBtn = document.getElementById('profileRetryBtn');
 // Check if username is already saved
 const savedUsername = localStorage.getItem('creatorly_ig_username');
 if (savedUsername) {
-  // Auto-fetch on load if username is saved
+  // Show skeleton loading immediately, then fetch
   blurredPreview.hidden = true;
+  skeletonLoading.hidden = false;
   fetchProfile(savedUsername);
 }
 
@@ -35,7 +36,6 @@ profileForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const username = usernameInput.value.trim().replace(/^@/, '');
   if (!username) return;
-  // Save username for future visits
   localStorage.setItem('creatorly_ig_username', username);
   await fetchProfile(username);
 });
@@ -43,11 +43,12 @@ profileForm.addEventListener('submit', async (e) => {
 profileRetryBtn.addEventListener('click', () => {
   profileError.hidden = true;
   blurredPreview.hidden = false;
+  skeletonLoading.hidden = true;
 });
 
 async function fetchProfile(username) {
   blurredPreview.hidden = true;
-  profileLoading.hidden = false;
+  skeletonLoading.hidden = false;
   profileResults.hidden = true;
   profileError.hidden = true;
 
@@ -70,24 +71,32 @@ async function fetchProfile(username) {
       throw new Error(json.error || 'Could not fetch profile');
     }
 
-    profileLoading.hidden = true;
+    skeletonLoading.hidden = true;
     profileResults.hidden = false;
     renderProfile(json.profile);
 
   } catch (err) {
-    profileLoading.hidden = true;
+    skeletonLoading.hidden = true;
     profileError.hidden = false;
     profileErrorMsg.textContent = err.message;
   }
 }
 
 function renderProfile(p) {
-  // Avatar & info
+  // Avatar — use fallback gradient if image fails
   const avatar = document.getElementById('profileAvatar');
+  const avatarFallback = document.getElementById('profileAvatarFallback');
   if (p.profilePicUrl) {
     avatar.src = p.profilePicUrl;
     avatar.style.display = 'block';
+    avatarFallback.style.display = 'none';
+    avatar.onerror = () => { avatar.style.display = 'none'; avatarFallback.style.display = 'flex'; };
+  } else {
+    avatar.style.display = 'none';
+    avatarFallback.style.display = 'flex';
   }
+  avatarFallback.textContent = (p.fullName || p.username || '?')[0].toUpperCase();
+
   document.getElementById('profileFullName').textContent = p.fullName || p.username;
   document.getElementById('profileUsername').textContent = `@${p.username}`;
   document.getElementById('profileBio').textContent = p.biography || '';
@@ -159,22 +168,22 @@ function renderProfile(p) {
   // Chart
   renderChart(p.viewsTrend);
 
-  // Hashtags
-  document.getElementById('hashtagsCloud').innerHTML = p.topHashtags.map(h =>
-    `<span class="hashtag-chip">${h.tag}<span class="hashtag-count">×${h.count}</span></span>`
-  ).join('') || '<p style="color:var(--text-dim)">No hashtags found in recent posts</p>';
-
-  // Recent Posts
-  document.getElementById('postsGrid').innerHTML = (p.recentPosts || []).map(post => `
-    <div class="post-item">
-      ${post.thumbnailUrl ? `<img class="post-thumb" src="${post.thumbnailUrl}" loading="lazy" alt="" />` : '<div class="post-thumb" style="background:var(--bg3)"></div>'}
-      <div class="post-stats">
-        <span class="post-stat">❤️ ${formatNum(post.likes)}</span>
-        <span class="post-stat">💬 ${formatNum(post.comments)}</span>
-        ${post.views > 0 ? `<span class="post-stat">👁 ${formatNum(post.views)}</span>` : ''}
-      </div>
-    </div>
-  `).join('') || '<p style="color:var(--text-dim)">No recent posts found</p>';
+  // Recent Posts — clickable to Instagram, with fallback for broken images
+  document.getElementById('postsGrid').innerHTML = (p.recentPosts || []).map(post => {
+    const link = post.postUrl || `https://www.instagram.com/${p.username}/`;
+    return `
+      <a href="${link}" target="_blank" rel="noopener" class="post-item">
+        <div class="post-thumb-wrap">
+          <div class="post-thumb-fallback">${post.type === 'Video' ? '🎬' : '📷'}</div>
+        </div>
+        <div class="post-stats">
+          <span class="post-stat">❤️ ${formatNum(post.likes)}</span>
+          <span class="post-stat">💬 ${formatNum(post.comments)}</span>
+          ${post.views > 0 ? `<span class="post-stat">👁 ${formatNum(post.views)}</span>` : ''}
+        </div>
+      </a>
+    `;
+  }).join('') || '<p style="color:var(--text-dim)">No recent posts found</p>';
 }
 
 function renderChart(trend) {

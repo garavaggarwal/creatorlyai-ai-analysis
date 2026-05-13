@@ -12,12 +12,10 @@
 </head>
 <body>
 
-  <!-- Animated BG -->
   <div class="page-bg-grid"></div>
   <div class="page-orb page-orb-1"></div>
   <div class="page-orb page-orb-2"></div>
 
-  <!-- ── HEADER (mobile) ── -->
   <header class="header">
     <div class="header-inner">
       <a href="/analyser" class="logo-link-analyser">
@@ -38,19 +36,17 @@
     </div>
   </header>
 
-  <!-- ── MAIN ── -->
   <main class="profile-main">
 
-    <!-- ── BLURRED PREVIEW (shown before username is entered) ── -->
+    <!-- ── BLURRED PREVIEW (before username entered) ── -->
     <div id="blurredPreview">
-      <!-- Fake blurred metrics -->
       <div class="card profile-header-card blurred-section">
         <div class="profile-header">
           <div class="profile-avatar-placeholder"></div>
           <div class="profile-info">
-            <div class="profile-name-row"><h2 class="profile-fullname">Your Profile</h2></div>
+            <h2 class="profile-fullname">Your Profile</h2>
             <p class="profile-username">@username</p>
-            <p class="profile-bio">Connect your Instagram to see your creator analytics</p>
+            <p class="profile-bio">Connect your Instagram to see analytics</p>
           </div>
         </div>
         <div class="profile-stats-row">
@@ -59,7 +55,6 @@
           <div class="profile-stat"><div class="profile-stat-value blurred-text">89</div><div class="profile-stat-label">Posts</div></div>
         </div>
       </div>
-
       <div class="card metrics-card blurred-section">
         <h3 class="card-title">Key Metrics</h3>
         <div class="metrics-grid">
@@ -69,8 +64,6 @@
           <div class="metric-item"><div class="metric-value blurred-text">4.2%</div><div class="metric-label">Engagement</div></div>
         </div>
       </div>
-
-      <!-- Unlock overlay -->
       <div class="unlock-overlay">
         <div class="unlock-card">
           <div class="unlock-icon">🔓</div>
@@ -90,18 +83,37 @@
       </div>
     </div>
 
-    <!-- ── LOADING ── -->
-    <div class="card profile-loading" id="profileLoading" hidden>
-      <div class="progress-ring-wrap">
-        <svg class="progress-ring-svg" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="5"/>
-          <circle cx="40" cy="40" r="32" fill="none" stroke="url(#pg2)" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="50" transform="rotate(-90 40 40)">
-            <defs><linearGradient id="pg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#22c55e"/></linearGradient></defs>
-          </circle>
-        </svg>
+    <!-- ── SKELETON LOADING (pulsing cards) ── -->
+    <div id="skeletonLoading" hidden>
+      <div class="card skeleton-card">
+        <div class="skeleton-header">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-lines">
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+            <div class="skeleton-line w80"></div>
+          </div>
+        </div>
+        <div class="skeleton-stats">
+          <div class="skeleton-stat"></div>
+          <div class="skeleton-stat"></div>
+          <div class="skeleton-stat"></div>
+        </div>
       </div>
-      <h3 class="progress-title">Fetching profile data…</h3>
-      <p class="progress-sub">This may take 15–30 seconds</p>
+      <div class="card skeleton-card">
+        <div class="skeleton-line w30" style="margin-bottom:16px"></div>
+        <div class="skeleton-grid">
+          <div class="skeleton-metric"></div>
+          <div class="skeleton-metric"></div>
+          <div class="skeleton-metric"></div>
+          <div class="skeleton-metric"></div>
+        </div>
+      </div>
+      <div class="card skeleton-card">
+        <div class="skeleton-line w40" style="margin-bottom:16px"></div>
+        <div class="skeleton-chart"></div>
+      </div>
+      <p class="skeleton-hint">Fetching profile data… this may take 15–30 seconds</p>
     </div>
 
     <!-- ── RESULTS ── -->
@@ -109,6 +121,7 @@
       <div class="card profile-header-card">
         <div class="profile-header">
           <img class="profile-avatar" id="profileAvatar" src="" alt="" />
+          <div class="profile-avatar-fallback" id="profileAvatarFallback" style="display:none"></div>
           <div class="profile-info">
             <div class="profile-name-row">
               <h2 class="profile-fullname" id="profileFullName"></h2>
@@ -132,11 +145,6 @@
         <div class="chart-wrap" id="chartWrap"></div>
       </div>
 
-      <div class="card hashtags-card">
-        <h3 class="card-title">Top Hashtags / Niche</h3>
-        <div class="hashtags-cloud" id="hashtagsCloud"></div>
-      </div>
-
       <div class="card posts-card">
         <h3 class="card-title">Recent Posts Performance</h3>
         <div class="posts-grid" id="postsGrid"></div>
@@ -155,7 +163,6 @@
 
   </main>
 
-  <!-- ── BOTTOM NAV ── -->
   <nav class="bottom-nav">
     <a href="/" class="bottom-nav-item">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
