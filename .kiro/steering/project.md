@@ -51,7 +51,10 @@ This file gives full context to any Kiro instance working on this project. Read 
 │   ├── landing.js             # Landing page JS (animations, typewriter, etc.)
 │   ├── login.html             # Login/signup page
 │   ├── login.css              # Login styles
-│   └── login.js               # Login/signup form logic
+│   ├── login.js               # Login/signup form logic
+│   ├── profile.html           # Profile analytics page
+│   ├── profile.css            # Profile page styles
+│   └── profile.js             # Profile analytics frontend logic
 ├── apt.txt                    # Railway system packages: ffmpeg, python3, python3-pip
 ├── package.json               # Dependencies + postinstall (installs yt-dlp to /app/bin)
 └── Procfile                   # Railway start command
@@ -69,6 +72,7 @@ This file gives full context to any Kiro instance working on this project. Read 
 | `GET` | `/api/latest-result` | Get user's most recent result (recovery fallback) |
 | `GET` | `/api/history` | Get user's past analyses (completed + failed) |
 | `GET` | `/api/usage` | Get user's analysis usage count |
+| `POST` | `/api/profile-analytics` | Fetch Instagram profile metrics via Apify |
 | `GET` | `/health` | Health check |
 
 All analysis endpoints accept an `Authorization: Bearer <supabase_jwt>` header to identify the user.
@@ -266,6 +270,39 @@ On the results page, when a video was just uploaded (current session):
 
 ---
 
+## Profile Analytics (`/profile`)
+
+A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-profile-scraper` actor.
+
+### Endpoint: `POST /api/profile-analytics`
+- Input: `{ username: "virat.kohli" }`
+- Requires `APIFY_API_TOKEN` env var
+- Returns profile data + calculated metrics (~15–30 seconds)
+
+### Metrics Calculated:
+1. **Follower Count** — total followers
+2. **Avg Views/Reel** — mean views across last 12 reels
+3. **Avg Likes/Reel** — mean likes across last 12 reels
+4. **Avg Comments/Reel** — mean comments across last 12 reels
+5. **Engagement Rate** — (avg likes + avg comments) ÷ followers × 100
+6. **Posting Frequency** — reels posted in last 30 days
+7. **Top Hashtags** — most used hashtags from captions, clustered by frequency
+
+### Frontend Components:
+- Profile header (avatar, name, bio, verified badge, business category)
+- Stats row (followers, following, posts)
+- Key metrics grid (6 metric cards with color-coded values)
+- Views & likes trend bar chart (last 12 posts)
+- Top hashtags cloud
+- Recent posts grid with thumbnails and engagement stats
+
+### Files:
+- `public/profile.html` — page structure
+- `public/profile.css` — profile-specific styles
+- `public/profile.js` — fetch + render logic
+
+---
+
 ## Frontend Pages
 
 ### `/analyser` (index.html + app.js)
@@ -288,6 +325,13 @@ On the results page, when a video was just uploaded (current session):
 
 ### `/` (landing.html + landing.js)
 - Marketing landing page with hero, live demo section, how-it-works, features grid, testimonials carousel, CTA
+
+### `/profile` (profile.html + profile.js + profile.css)
+- Username input with @ prefix
+- Fetches profile data via Apify (15–30 second load time)
+- Displays: profile header, key metrics grid, views/likes trend chart, top hashtags cloud, recent posts grid
+- Bottom nav with Profile tab active
+- Auth required (redirects to login if not logged in)
 
 ---
 
