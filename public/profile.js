@@ -46,6 +46,35 @@ profileRetryBtn.addEventListener('click', () => {
   skeletonLoading.hidden = true;
 });
 
+// ── Change Username Popup ──
+function openChangeUsernamePopup() {
+  const overlay = document.getElementById('changeUsernameOverlay');
+  const currentEl = document.getElementById('popupCurrentUsername');
+  const saved = localStorage.getItem('creatorly_ig_username');
+  currentEl.textContent = saved ? `Current: @${saved}` : 'No username set';
+  document.getElementById('newUsernameInput').value = '';
+  overlay.hidden = false;
+}
+
+function closeChangeUsernamePopup() {
+  document.getElementById('changeUsernameOverlay').hidden = true;
+}
+
+// Close popup on overlay click (outside card)
+document.getElementById('changeUsernameOverlay')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeChangeUsernamePopup();
+});
+
+// Handle change username form submit
+document.getElementById('changeUsernameForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newUsername = document.getElementById('newUsernameInput').value.trim().replace(/^@/, '');
+  if (!newUsername) return;
+  localStorage.setItem('creatorly_ig_username', newUsername);
+  closeChangeUsernamePopup();
+  await fetchProfile(newUsername);
+});
+
 async function fetchProfile(username) {
   blurredPreview.hidden = true;
   skeletonLoading.hidden = false;

@@ -447,3 +447,82 @@
   color: #fff;
   flex-shrink: 0;
 }
+
+
+/* ── Change Username Button ── */
+.change-username-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+.change-username-btn:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+/* ── Popup Overlay ── */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.popup-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  animation: cardIn 0.3s ease;
+}
+.popup-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.popup-close:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: var(--red);
+  color: var(--red);
+}
+.popup-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.popup-current {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}

@@ -26,18 +26,27 @@ function renderHeaderUser() {
   if (user) {
     const name    = typeof getUserDisplayName === 'function' ? getUserDisplayName(user) : user.email;
     const initial = typeof getUserInitial === 'function' ? getUserInitial(user) : name[0].toUpperCase();
+    const igUsername = localStorage.getItem('creatorly_ig_username');
+    
+    const igHtml = igUsername 
+      ? `<a href="/profile" class="header-ig-link" title="View Profile Analytics">@${igUsername}</a>`
+      : `<a href="/profile" class="header-ig-add" title="Connect Instagram">📸 Add Instagram</a>`;
+    
     headerAuth.innerHTML = `
-      <div class="user-menu">
-        <div class="user-avatar" id="userAvatarBtn" title="${name}">${initial}</div>
-        <div class="user-dropdown" id="userDropdown" hidden>
-          <div class="user-dropdown-avatar">${initial}</div>
-          <div class="user-dropdown-name">${name}</div>
-          <div class="user-dropdown-email">${user.email}</div>
-          <hr class="dropdown-divider" />
-          <button class="dropdown-item" onclick="handleLogout()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Sign Out
-          </button>
+      <div class="header-right-group">
+        ${igHtml}
+        <div class="user-menu">
+          <div class="user-avatar" id="userAvatarBtn" title="${name}">${initial}</div>
+          <div class="user-dropdown" id="userDropdown" hidden>
+            <div class="user-dropdown-avatar">${initial}</div>
+            <div class="user-dropdown-name">${name}</div>
+            <div class="user-dropdown-email">${user.email}</div>
+            <hr class="dropdown-divider" />
+            <button class="dropdown-item" onclick="handleLogout()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     `;
