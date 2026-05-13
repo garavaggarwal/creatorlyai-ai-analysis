@@ -325,22 +325,36 @@ async function downloadInstagramReel(url, outputPath) {
 
   console.log(`\n🔍 Attempting download for: ${cleanUrl}`);
 
-  // Strategy 1: Cobalt API (with one retry on transient failure)
+  // Strategy 1: Apify Instagram Scraper (most reliable — uses proxies)
+  if (process.env.APIFY_API_TOKEN) {
+    try {
+      console.log('⬇️  Strategy 1: Apify Instagram Scraper...');
+      await downloadViaApify(cleanUrl, outputPath);
+      console.log('✅ Apify succeeded');
+      return outputPath;
+    } catch (e0) {
+      console.warn('⚠️  Apify failed:', e0.message);
+    }
+  } else {
+    console.warn('⚠️  APIFY_API_TOKEN not set, skipping Apify strategy');
+  }
+
+  // Strategy 2: Cobalt API (with one retry on transient failure)
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      console.log(`⬇️  Strategy 1: Cobalt API (attempt ${attempt})...`);
+      console.log(`⬇️  Strategy 2: Cobalt API (attempt ${attempt})...`);
       await downloadViaCobalt(cleanUrl, outputPath);
       console.log('✅ Cobalt succeeded');
       return outputPath;
     } catch (e1) {
       console.warn(`⚠️  Cobalt attempt ${attempt} failed:`, e1.message);
-      if (attempt < 2) await new Promise(r => setTimeout(r, 2000)); // brief pause before retry
+      if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
   }
 
-  // Strategy 2: yt-dlp (system binary resolved at startup)
+  // Strategy 3: yt-dlp (system binary resolved at startup)
   try {
-    console.log('⬇️  Strategy 2: yt-dlp...');
+    console.log('⬇️  Strategy 3: yt-dlp...');
     await downloadViaYtDlp(cleanUrl, outputPath);
     console.log('✅ yt-dlp succeeded');
     return outputPath;
@@ -348,9 +362,9 @@ async function downloadInstagramReel(url, outputPath) {
     console.warn('⚠️  yt-dlp failed:', e2.message);
   }
 
-  // Strategy 3: yt-dlp-wrap npm package (downloads its own binary if needed)
+  // Strategy 4: yt-dlp-wrap npm package (downloads its own binary if needed)
   try {
-    console.log('⬇️  Strategy 3: yt-dlp-wrap...');
+    console.log('⬇️  Strategy 4: yt-dlp-wrap...');
     await downloadViaYtDlpWrap(cleanUrl, outputPath);
     console.log('✅ yt-dlp-wrap succeeded');
     return outputPath;
@@ -361,6 +375,55 @@ async function downloadInstagramReel(url, outputPath) {
       'Please download the video to your device and upload it directly to Creatorly AI.'
     );
   }
+}
+
+// ─── Strategy 1: Apify Instagram Scraper ──────────────────────────────────────
+async function downloadViaApify(url, outputPath) {
+  const { ApifyClient } = require('apify-client');
+  const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
+
+  // Run the Instagram scraper actor with the reel URL
+  const run = await client.actor('apify/instagram-scraper').call(
+    {
+      directUrls: [url],
+      resultsType: 'posts',
+      resultsLimit: 1,
+      addParentData: false,
+    },
+    {
+      timeout: 120, // 2 minute timeout
+      memory: 1024, // 1GB memory
+    }
+  );
+
+  if (!run || !run.defaultDatasetId) {
+    throw new Error('Apify run did not return a dataset');
+  }
+
+  // Fetch results
+  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  
+  if (!items || items.length === 0) {
+    throw new Error('Apify returned no results for this URL');
+  }
+
+  const post = items[0];
+  
+  // Get video URL from the result
+  const videoUrl = post.videoUrl || post.video_url || post.displayUrl || null;
+  
+  if (!videoUrl) {
+    throw new Error('Apify could not extract video URL from this reel');
+  }
+
+  console.log('📡 Apify provided video URL, downloading to local disk...');
+  await streamUrlToFile(videoUrl, outputPath);
+  
+  if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 1000) {
+    throw new Error('Downloaded file is too small or missing');
+  }
+  
+  return outputPath;
 }
 
 // Rename the typo-d function for clarity
