@@ -409,10 +409,37 @@ async function downloadViaApify(url, outputPath) {
 
   const post = items[0];
   
-  // Get video URL from the result
-  const videoUrl = post.videoUrl || post.video_url || post.displayUrl || null;
+  // Log the keys we got back for debugging
+  console.log('📋 Apify result keys:', Object.keys(post).join(', '));
+  
+  // Try multiple possible field names for video URL
+  let videoUrl = post.videoUrl 
+    || post.video_url 
+    || post.videoPlaybackUrl
+    || post.video_play_url
+    || post.url  // some actors put the CDN URL here
+    || null;
+  
+  // Check nested structures
+  if (!videoUrl && post.videoVersions && post.videoVersions.length > 0) {
+    videoUrl = post.videoVersions[0].url;
+  }
+  if (!videoUrl && post.video_versions && post.video_versions.length > 0) {
+    videoUrl = post.video_versions[0].url;
+  }
+  if (!videoUrl && post.media && post.media.video_url) {
+    videoUrl = post.media.video_url;
+  }
+  // displayUrl is usually an image, only use as last resort for video type
+  if (!videoUrl && post.type === 'Video' && post.displayUrl) {
+    videoUrl = post.displayUrl;
+  }
+  if (!videoUrl && post.isVideo && post.displayUrl) {
+    videoUrl = post.displayUrl;
+  }
   
   if (!videoUrl) {
+    console.error('❌ Apify result (first 500 chars):', JSON.stringify(post).slice(0, 500));
     throw new Error('Apify could not extract video URL from this reel');
   }
 
