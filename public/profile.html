@@ -126,7 +126,7 @@
             <div class="profile-name-row">
               <h2 class="profile-fullname" id="profileFullName"></h2>
               <span class="verified-badge" id="verifiedBadge" hidden>✓</span>
-              <button class="change-username-btn" id="changeUsernameBtn" onclick="openChangeUsernamePopup()">Change</button>
+              <button class="change-username-btn" id="changeUsernameBtn" onclick="window.openChangeUsernamePopup()">Change</button>
             </div>
             <p class="profile-username" id="profileUsername"></p>
             <p class="profile-bio" id="profileBio"></p>
@@ -165,9 +165,9 @@
   </main>
 
   <!-- ── CHANGE USERNAME POPUP ── -->
-  <div class="popup-overlay" id="changeUsernameOverlay" hidden>
+  <div class="popup-overlay" id="changeUsernameOverlay" hidden style="display:none">
     <div class="popup-card">
-      <button class="popup-close" id="popupCloseBtn" onclick="closeChangeUsernamePopup()">✕</button>
+      <button class="popup-close" id="popupCloseBtn" onclick="window.closeChangeUsernamePopup()">✕</button>
       <h3 class="popup-title">Change Instagram Username</h3>
       <p class="popup-current" id="popupCurrentUsername"></p>
       <form id="changeUsernameForm" class="profile-form">

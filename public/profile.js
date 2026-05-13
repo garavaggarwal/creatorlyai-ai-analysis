@@ -47,33 +47,45 @@ profileRetryBtn.addEventListener('click', () => {
 });
 
 // ── Change Username Popup ──
-function openChangeUsernamePopup() {
+window.openChangeUsernamePopup = function() {
   const overlay = document.getElementById('changeUsernameOverlay');
+  if (!overlay) return;
   const currentEl = document.getElementById('popupCurrentUsername');
   const saved = localStorage.getItem('creatorly_ig_username');
-  currentEl.textContent = saved ? `Current: @${saved}` : 'No username set';
-  document.getElementById('newUsernameInput').value = '';
-  overlay.hidden = false;
-}
+  if (currentEl) currentEl.textContent = saved ? `Current: @${saved}` : 'No username set';
+  const input = document.getElementById('newUsernameInput');
+  if (input) input.value = '';
+  overlay.removeAttribute('hidden');
+  overlay.style.display = 'flex';
+};
 
-function closeChangeUsernamePopup() {
-  document.getElementById('changeUsernameOverlay').hidden = true;
-}
+window.closeChangeUsernamePopup = function() {
+  const overlay = document.getElementById('changeUsernameOverlay');
+  if (!overlay) return;
+  overlay.setAttribute('hidden', '');
+  overlay.style.display = 'none';
+};
 
 // Close popup on overlay click (outside card)
-document.getElementById('changeUsernameOverlay')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) closeChangeUsernamePopup();
+document.addEventListener('click', (e) => {
+  const overlay = document.getElementById('changeUsernameOverlay');
+  if (overlay && e.target === overlay) {
+    window.closeChangeUsernamePopup();
+  }
 });
 
 // Handle change username form submit
-document.getElementById('changeUsernameForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const newUsername = document.getElementById('newUsernameInput').value.trim().replace(/^@/, '');
-  if (!newUsername) return;
-  localStorage.setItem('creatorly_ig_username', newUsername);
-  closeChangeUsernamePopup();
-  await fetchProfile(newUsername);
-});
+const changeForm = document.getElementById('changeUsernameForm');
+if (changeForm) {
+  changeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newUsername = document.getElementById('newUsernameInput').value.trim().replace(/^@/, '');
+    if (!newUsername) return;
+    localStorage.setItem('creatorly_ig_username', newUsername);
+    window.closeChangeUsernamePopup();
+    await fetchProfile(newUsername);
+  });
+}
 
 async function fetchProfile(username) {
   blurredPreview.hidden = true;
