@@ -126,6 +126,9 @@
             <div class="profile-name-row">
               <h2 class="profile-fullname" id="profileFullName"></h2>
               <span class="verified-badge" id="verifiedBadge" hidden>✓</span>
+              <button class="edit-username-btn" id="editUsernameBtn" title="Change username">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
             </div>
             <p class="profile-username" id="profileUsername"></p>
             <p class="profile-bio" id="profileBio"></p>
@@ -159,6 +162,24 @@
       <h3 class="error-title">Could not fetch profile</h3>
       <p class="error-msg" id="profileErrorMsg"></p>
       <button class="btn btn-outline" id="profileRetryBtn">Try Again</button>
+    </div>
+
+    <!-- ── CHANGE USERNAME POPUP ── -->
+    <div class="popup-overlay" id="changeUsernamePopup" hidden>
+      <div class="popup-card">
+        <button class="popup-close" id="popupCloseBtn" aria-label="Close">✕</button>
+        <h3 class="popup-title">Change Username</h3>
+        <p class="popup-sub">Enter a new Instagram username to view their profile analytics</p>
+        <form id="changeUsernameForm" class="profile-form">
+          <div class="profile-input-row">
+            <span class="at-symbol">@</span>
+            <input type="text" id="newUsernameInput" placeholder="new_username" autocomplete="off" spellcheck="false" required />
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <span class="btn-text">Update</span>
+          </button>
+        </form>
+      </div>
     </div>
 
   </main>

@@ -46,6 +46,44 @@ profileRetryBtn.addEventListener('click', () => {
   skeletonLoading.hidden = true;
 });
 
+// ── Change Username Popup ──
+const changeUsernamePopup = document.getElementById('changeUsernamePopup');
+const editUsernameBtn = document.getElementById('editUsernameBtn');
+const popupCloseBtn = document.getElementById('popupCloseBtn');
+const changeUsernameForm = document.getElementById('changeUsernameForm');
+const newUsernameInput = document.getElementById('newUsernameInput');
+
+// Open popup
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#editUsernameBtn')) {
+    changeUsernamePopup.hidden = false;
+    newUsernameInput.value = '';
+    newUsernameInput.focus();
+  }
+});
+
+// Close popup
+popupCloseBtn.addEventListener('click', () => {
+  changeUsernamePopup.hidden = true;
+});
+
+// Close on overlay click
+changeUsernamePopup.addEventListener('click', (e) => {
+  if (e.target === changeUsernamePopup) {
+    changeUsernamePopup.hidden = true;
+  }
+});
+
+// Submit new username
+changeUsernameForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newUsername = newUsernameInput.value.trim().replace(/^@/, '');
+  if (!newUsername) return;
+  changeUsernamePopup.hidden = true;
+  localStorage.setItem('creatorly_ig_username', newUsername);
+  await fetchProfile(newUsername);
+});
+
 async function fetchProfile(username) {
   blurredPreview.hidden = true;
   skeletonLoading.hidden = false;
