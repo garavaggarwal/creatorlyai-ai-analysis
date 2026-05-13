@@ -212,7 +212,7 @@ app.get('/api/history', async (req, res) => {
 
     // Get all analyses for this user (completed + failed), ordered by date
     const result = await new Promise((resolve, reject) => {
-      const path = `/rest/v1/video_analyses?user_id=eq.${encodeURIComponent(userId)}&status=in.(completed,failed)&order=created_at.desc&limit=50&select=id,created_at,original_filename,instagram_url,source,overall_score,niche,video_duration,status,error_message`;
+      const path = `/rest/v1/video_analyses?user_id=eq.${encodeURIComponent(userId)}&status=in.(completed,failed)&order=created_at.desc&limit=50&select=id,created_at,original_filename,instagram_url,source,overall_score,niche,video_duration,status,error_message,thumbnail,overall_summary,video_summary`;
       const options = {
         hostname: url.hostname,
         path,
@@ -245,6 +245,7 @@ app.get('/api/history', async (req, res) => {
       url: row.instagram_url,
       score: row.overall_score,
       thumbnail: row.thumbnail || null,
+      summary: row.overall_summary || row.video_summary || null,
       niche: row.niche,
       duration: row.video_duration,
       error: row.error_message || null,

@@ -651,10 +651,15 @@ function renderHistoryPage() {
     const dateStr = formatRelativeDate(item.createdAt);
     const filename = item.filename || 'Untitled';
     const thumbHtml = item.thumbnail 
-      ? `<img class="history-list-thumb" src="${item.thumbnail}" alt="${filename}" loading="lazy" />`
+      ? `<img class="history-list-thumb" src="${item.thumbnail}" alt="Video thumbnail" loading="lazy" />`
       : `<div class="history-list-thumb-placeholder">${isFailed ? '❌' : '🎬'}</div>`;
     const niche = item.niche || 'general';
     const sourceIcon = item.source === 'instagram_url' ? '📸' : '📤';
+    
+    // Show summary as the title, fallback to filename
+    const displayName = item.summary 
+      ? (item.summary.length > 60 ? item.summary.slice(0, 60) + '…' : item.summary)
+      : `${sourceIcon} ${filename}`;
     
     const scoreHtml = isFailed 
       ? `<div class="history-list-score failed">Failed</div>`
@@ -668,7 +673,7 @@ function renderHistoryPage() {
       <div class="history-list-item ${isFailed ? 'history-failed' : ''}" onclick="loadHistoryResult('${item.id}')">
         ${thumbHtml}
         <div class="history-list-info">
-          <div class="history-list-name">${sourceIcon} ${filename}</div>
+          <div class="history-list-name">${displayName}</div>
           <div class="history-list-meta">
             <span>${dateStr}</span>
             <span class="history-list-niche">${niche}</span>
