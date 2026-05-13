@@ -624,7 +624,8 @@ function navigateTo(tab) {
     if (main) main.hidden = true;
     if (footer) footer.hidden = true;
     if (historyPage) historyPage.hidden = false;
-    renderHistoryPage();
+    // Always re-fetch history when navigating to this tab
+    fetchAndRenderHistory();
   }
   
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -635,6 +636,25 @@ if (navAnalyse) navAnalyse.classList.add('active');
 if (sideNavAnalyse) sideNavAnalyse.classList.add('active');
 
 /* ── Render history page (list view) ── */
+async function fetchAndRenderHistory() {
+  const session = typeof getRawSession === 'function' ? getRawSession() : null;
+  const authToken = session?.access_token || null;
+  if (!authToken) { renderHistoryPage(); return; }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/history`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.success && json.history) {
+        historyData = json.history;
+      }
+    }
+  } catch (_) {}
+  renderHistoryPage();
+}
+
 function renderHistoryPage() {
   if (!historyData || historyData.length === 0) {
     if (historyPageList) historyPageList.innerHTML = '';
@@ -656,10 +676,12 @@ function renderHistoryPage() {
     const niche = item.niche || 'general';
     const sourceIcon = item.source === 'instagram_url' ? '📸' : '📤';
     
-    // Show summary as the title, fallback to filename
-    const displayName = item.summary 
-      ? (item.summary.length > 60 ? item.summary.slice(0, 60) + '…' : item.summary)
+    // Show short 3-5 word description, fallback to filename
+    const summary = item.summary || '';
+    const shortDesc = summary 
+      ? summary.split(/[\s,.\-—]+/).slice(0, 5).join(' ')
       : `${sourceIcon} ${filename}`;
+    const displayName = shortDesc.length > 40 ? shortDesc.slice(0, 40) + '…' : shortDesc;
     
     const scoreHtml = isFailed 
       ? `<div class="history-list-score failed">Failed</div>`
@@ -938,17 +960,8 @@ function renderResults(r) {
     if (idx === 0) setTimeout(() => selectBreakdownChip(key), 200);
   });
 
-  // Caption analysis
-  if (r.caption && r.caption.score !== null) {
-    document.getElementById('captionCard').hidden = false;
-    document.getElementById('captionContent').innerHTML = renderTextAnalysis(r.caption);
-  }
-
-  // Hashtag analysis
-  if (r.hashtags && r.hashtags.score !== null) {
-    document.getElementById('hashtagCard').hidden = false;
-    document.getElementById('hashtagContent').innerHTML = renderHashtagAnalysis(r.hashtags);
-  }
+  // Caption analysis — removed from results page
+  // Hashtag analysis — removed from results page
 
   // Suggested captions & hashtags
   const hasSugCaptions = r.suggested_captions && r.suggested_captions.length > 0;
