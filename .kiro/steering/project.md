@@ -11,6 +11,7 @@ This file gives full context to any Kiro instance working on this project. Read 
 **Live URLs:**
 - Frontend: `https://creatorlyai.in` (Vercel)
 - Backend API: `https://web-production-7bc95.up.railway.app` (Railway)
+- Backend API (custom domain, for Indian ISPs): `https://api.creatorlyai.in` → Railway (CNAME setup in progress)
 - GitHub repo: `garavaggarwal/creatorlyai-ai-analysis`
 
 ---
@@ -86,7 +87,7 @@ Video File / Instagram URL
   → Return to frontend
 ```
 
-**Gemini model** is configurable via `GEMINI_MODEL` env var on Railway. Current recommended: `gemini-2.5-flash-preview-05-20`. Falls back through `gemini-1.5-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-pro` if unavailable.
+**Gemini model** is configurable via `GEMINI_MODEL` env var on Railway. Current recommended: `gemini-2.5-flash-preview-05-20`. Falls back through `gemini-1.5-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-pro` if unavailable. The text analyser also uses `GEMINI_MODEL` (previously hardcoded to `gemini-1.5-flash` which returned 404).
 
 ---
 
@@ -216,10 +217,14 @@ When a user locks their screen or loses connection mid-analysis:
 ### Backend (`GET /api/history`)
 - Returns last 50 analyses for the authenticated user
 - Includes both `completed` and `failed` analyses
-- Returns: `id`, `createdAt`, `source`, `status`, `filename`, `score`, `thumbnail`, `niche`, `duration`, `error`
+- Returns: `id`, `createdAt`, `source`, `status`, `filename`, `score`, `thumbnail`, `summary`, `niche`, `duration`, `error`
+- `summary` is derived from `overall_summary` or `video_summary` (Gemini-generated one-liner)
 
 ### Frontend (History Page)
-- Full-page list view with each item showing: thumbnail/icon, filename, source icon, date, niche badge, score
+- Full-page list view with each item showing: thumbnail, 3-5 word video description, date, niche badge, score
+- **Re-fetches history from API every time the History tab is opened** (fixes stale data / Railway cold start issues)
+- Thumbnail shown as actual video screenshot (base64 JPEG from first frame)
+- Description shows first 3-5 words of the video summary (not the raw filename)
 - Failed analyses shown with red border, ❌ icon, "Failed" badge, and truncated error message
 - Clicking a completed item loads full analysis results
 - Clicking a failed item shows the error
@@ -253,6 +258,7 @@ On the results page, when a video was just uploaded (current session):
 - First chip auto-selected on load
 - Active chip highlighted with color-coded border and glow (green/yellow/red)
 - 8 metrics: Hook, Retention, Visual, Audio, Content, Editing, Text, Compliance
+- **Caption Analysis and Hashtag Analysis cards have been removed** from the results page (suggested captions/hashtags still shown)
 
 ---
 
@@ -260,11 +266,13 @@ On the results page, when a video was just uploaded (current session):
 
 ### `/analyser` (index.html + app.js)
 - Two tabs: **Upload Reel** and **Instagram Link**
+- **Credits bar** at top showing "X used / 5 available" with purple gradient progress bar (fetches from `/api/usage`)
 - Submit button always says "Analyse Reel" (disabled until file selected / URL entered)
 - Progress card shows 3-step animation during analysis
-- Results: score ring + thumbnail, wins/fixes, horizontally scrollable score breakdown with detail card, caption/hashtag analysis, suggested captions, suggested hashtags, video info grid, video player + sync timeline
+- Results: score ring + thumbnail, wins/fixes, horizontally scrollable score breakdown with detail card, suggested captions, suggested hashtags, sync timeline + video player, video info grid
+- **Section order**: Score ring → Wins/Fixes → Score Breakdown → Suggested Captions/Hashtags → Sync Timeline (above Video Info) → Video Info → Analyse Another
 - Error card with "Try Again" button
-- History page (toggled via navigation)
+- History page (toggled via navigation, re-fetches on every open)
 - Desktop: left sidebar (collapsible), no top header
 - Mobile: top header + bottom navigation bar
 
@@ -281,6 +289,8 @@ On the results page, when a video was just uploaded (current session):
 
 ## Known Issues / TODO
 
+- **Indian ISP blocking Railway** — Many Indian ISPs (Jio, Airtel, Vi) block `*.up.railway.app` domains. Custom domain `api.creatorlyai.in` is being set up (CNAME → `i1uwfu0h.up.railway.app`) to bypass this. Once DNS propagates, `API_BASE` in `app.js` must be switched to `https://api.creatorlyai.in`.
+- **Railway idle timeout** — Container sleeps after ~17 seconds of inactivity on the hobby plan ($5/month credit). Wakes on request but Indian users can't trigger wake-up due to ISP blocking.
 - **Instagram URL blocking** — Railway IPs are blocked by Instagram. Need RapidAPI or residential proxy solution.
 - **yt-dlp-wrap deprecated** — npm warns `yt-dlp-wrap@2.3.12` is no longer supported. Works for now but may need replacing.
 - **`fluent-ffmpeg` deprecated** — npm warns about this too. Works fine currently.
@@ -295,6 +305,31 @@ A Kiro `agentStop` hook exists at `.kiro/hooks/update-steering-on-stop.kiro.hook
 
 ---
 
+## Credits Bar (Analyser Page)
+
+- Shown at the top of the analyser page, above the upload card
+- Displays "X used / 5 available" with a purple gradient progress bar
+- Fetches data from `GET /api/usage` on page load
+- Only visible when user is logged in
+- Bar fills proportionally (1/5 = 20%, 2/5 = 40%, etc.)
+- Hidden until usage data is successfully fetched
+
+---
+
+## Custom Domain Setup (api.creatorlyai.in)
+
+Indian ISPs block `*.up.railway.app`. To fix this:
+1. Railway custom domain added: `api.creatorlyai.in` → port 8080
+2. DNS records needed on GoDaddy:
+   - CNAME: `api` → `i1uwfu0h.up.railway.app` (TTL: 1/2 hour)
+   - TXT: `_railway-verify.api` → `railway-verify=2b07ca81be3600b0e24afefea4...` (from Railway)
+3. Once verified, update `API_BASE` in `public/app.js` to `https://api.creatorlyai.in`
+4. Also update CORS allowed origins in `server.js` (already added `https://api.creatorlyai.in`)
+
+**Status:** CNAME added on GoDaddy, waiting for Railway DNS verification (yellow triangle → green).
+
+---
+
 ## Coding Conventions
 
 - **No TypeScript** — pure vanilla JS throughout
@@ -306,3 +341,5 @@ A Kiro `agentStop` hook exists at `.kiro/hooks/update-steering-on-stop.kiro.hook
 - All API calls from frontend include `Authorization: Bearer <token>` header
 - Server extracts user from JWT via `extractUserId(req)` and `extractUserEmail(req)` — no external JWT library
 - **fluent-ffmpeg `.screenshots()`** is a terminal method — never chain `.run()` after it
+- **All CSS/JS references in HTML use relative paths** (`/landing.css`, `/auth.js`) — never absolute Railway URLs
+- **`vercel.json`** must have routes for every static file referenced from HTML (including `auth.js`)
