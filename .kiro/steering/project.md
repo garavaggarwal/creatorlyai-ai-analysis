@@ -344,6 +344,27 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 - Marketing landing page with hero, live demo section, how-it-works, features grid, testimonials carousel, CTA
 
 ### `/profile` (profile.html + profile.js + profile.css)
+- Instagram profile analytics page
+- User enters Instagram username → Apify scrapes profile data → renders analytics
+- **Profile photo** loaded via `/api/image-proxy` to bypass Instagram CDN CORS
+- **Reel thumbnails** also loaded via image proxy with fallback to emoji icons
+- Key metrics: Avg Views, Avg Likes, Avg Comments, Avg Shares, Avg Saves, ER by Followers, ER by Views, Reach Efficiency
+- Views/Likes trend chart (bar chart, last 10 posts)
+- Recent posts grid with thumbnails, likes, comments
+- Bottom nav: Home, Analyse, History, Profile (consistent with analyser page)
+- Username saved in localStorage for persistence across sessions
+
+---
+
+## Image Proxy (`GET /api/image-proxy`)
+
+- Proxies external image URLs through the server to bypass CORS
+- Used for Instagram profile photos and reel thumbnails
+- Accepts `?url=<encoded_url>` query parameter
+- Sets `Cache-Control: public, max-age=86400` (24h cache)
+- Falls back gracefully on error
+
+### `/profile` (profile.html + profile.js + profile.css)
 - First visit: blurred preview cards + unlock overlay (enter username)
 - Return visits: skeleton loading animation → auto-fetches saved username
 - Displays: profile header (with edit button), 8 key metrics, views/likes trend chart, recent posts (clickable → Instagram)
