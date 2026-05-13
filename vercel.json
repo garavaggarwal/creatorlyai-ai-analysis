@@ -28,6 +28,10 @@
       "dest": "/public/index.html"
     },
     {
+      "src": "/profile",
+      "dest": "/public/profile.html"
+    },
+    {
       "src": "/style.css",
       "dest": "/public/style.css"
     },
@@ -54,6 +58,14 @@
     {
       "src": "/auth.js",
       "dest": "/public/auth.js"
+    },
+    {
+      "src": "/profile.css",
+      "dest": "/public/profile.css"
+    },
+    {
+      "src": "/profile.js",
+      "dest": "/public/profile.js"
     },
     {
       "src": "/",

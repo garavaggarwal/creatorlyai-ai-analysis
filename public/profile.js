@@ -15,28 +15,38 @@ const API_BASE = 'https://web-production-7bc95.up.railway.app';
 // DOM refs
 const profileForm = document.getElementById('profileForm');
 const usernameInput = document.getElementById('usernameInput');
-const inputCard = document.getElementById('inputCard');
+const blurredPreview = document.getElementById('blurredPreview');
 const profileLoading = document.getElementById('profileLoading');
 const profileResults = document.getElementById('profileResults');
 const profileError = document.getElementById('profileError');
 const profileErrorMsg = document.getElementById('profileErrorMsg');
 const profileRetryBtn = document.getElementById('profileRetryBtn');
 
+// Check if username is already saved
+const savedUsername = localStorage.getItem('creatorly_ig_username');
+if (savedUsername) {
+  // Auto-fetch on load if username is saved
+  blurredPreview.hidden = true;
+  fetchProfile(savedUsername);
+}
+
 // Form submit
 profileForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const username = usernameInput.value.trim();
+  const username = usernameInput.value.trim().replace(/^@/, '');
   if (!username) return;
+  // Save username for future visits
+  localStorage.setItem('creatorly_ig_username', username);
   await fetchProfile(username);
 });
 
 profileRetryBtn.addEventListener('click', () => {
   profileError.hidden = true;
-  inputCard.hidden = false;
+  blurredPreview.hidden = false;
 });
 
 async function fetchProfile(username) {
-  inputCard.hidden = true;
+  blurredPreview.hidden = true;
   profileLoading.hidden = false;
   profileResults.hidden = true;
   profileError.hidden = true;
@@ -73,7 +83,11 @@ async function fetchProfile(username) {
 
 function renderProfile(p) {
   // Avatar & info
-  document.getElementById('profileAvatar').src = p.profilePicUrl || '';
+  const avatar = document.getElementById('profileAvatar');
+  if (p.profilePicUrl) {
+    avatar.src = p.profilePicUrl;
+    avatar.style.display = 'block';
+  }
   document.getElementById('profileFullName').textContent = p.fullName || p.username;
   document.getElementById('profileUsername').textContent = `@${p.username}`;
   document.getElementById('profileBio').textContent = p.biography || '';
@@ -142,16 +156,16 @@ function renderProfile(p) {
     </div>
   `;
 
-  // Chart — Views & Likes trend
+  // Chart
   renderChart(p.viewsTrend);
 
   // Hashtags
   document.getElementById('hashtagsCloud').innerHTML = p.topHashtags.map(h =>
     `<span class="hashtag-chip">${h.tag}<span class="hashtag-count">×${h.count}</span></span>`
-  ).join('');
+  ).join('') || '<p style="color:var(--text-dim)">No hashtags found in recent posts</p>';
 
   // Recent Posts
-  document.getElementById('postsGrid').innerHTML = p.recentPosts.map(post => `
+  document.getElementById('postsGrid').innerHTML = (p.recentPosts || []).map(post => `
     <div class="post-item">
       ${post.thumbnailUrl ? `<img class="post-thumb" src="${post.thumbnailUrl}" loading="lazy" alt="" />` : '<div class="post-thumb" style="background:var(--bg3)"></div>'}
       <div class="post-stats">
@@ -160,7 +174,7 @@ function renderProfile(p) {
         ${post.views > 0 ? `<span class="post-stat">👁 ${formatNum(post.views)}</span>` : ''}
       </div>
     </div>
-  `).join('');
+  `).join('') || '<p style="color:var(--text-dim)">No recent posts found</p>';
 }
 
 function renderChart(trend) {

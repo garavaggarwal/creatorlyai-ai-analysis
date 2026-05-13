@@ -283,3 +283,63 @@
   .posts-grid { grid-template-columns: repeat(2, 1fr); }
   .profile-avatar { width: 56px; height: 56px; }
 }
+
+
+/* ── Blurred Preview + Unlock ── */
+#blurredPreview {
+  position: relative;
+}
+.blurred-section {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+.blurred-text {
+  filter: blur(4px);
+}
+.profile-avatar-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bg3), var(--accent));
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* Unlock Overlay */
+.unlock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 20px;
+}
+.unlock-card {
+  background: rgba(17,17,24,0.95);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  animation: cardIn 0.5s ease;
+}
+.unlock-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+.unlock-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.unlock-sub {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
