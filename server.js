@@ -273,6 +273,149 @@ app.get('/analyser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ─── Profile page route ───────────────────────────────────────────────────────
+app.get('/profile', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+});
+
+// ─── Profile Analytics API ────────────────────────────────────────────────────
+app.post('/api/profile-analytics', async (req, res) => {
+  const { username } = req.body || {};
+  if (!username || !username.trim()) {
+    return res.status(400).json({ error: 'No username provided' });
+  }
+
+  if (!process.env.APIFY_API_TOKEN) {
+    return res.status(503).json({ error: 'Profile analytics not configured (APIFY_API_TOKEN missing)' });
+  }
+
+  const userId = extractUserId(req);
+
+  try {
+    const cleanUsername = username.trim().replace(/^@/, '');
+    console.log(`\n📊 Profile analytics request | Username: ${cleanUsername} | User: ${userId || 'anonymous'}`);
+
+    const { ApifyClient } = require('apify-client');
+    const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
+
+    // Run the Instagram Profile Scraper actor
+    const run = await client.actor('apify/instagram-profile-scraper').call(
+      {
+        usernames: [cleanUsername],
+      },
+      {
+        timeout: 120,
+        memory: 1024,
+      }
+    );
+
+    if (!run || !run.defaultDatasetId) {
+      throw new Error('Apify run did not return a dataset');
+    }
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+
+    if (!items || items.length === 0) {
+      throw new Error('Could not find this Instagram profile. Make sure the username is correct and the profile is public.');
+    }
+
+    const profile = items[0];
+    console.log('📋 Profile keys:', Object.keys(profile).join(', '));
+
+    // Extract recent posts/reels for metrics calculation
+    const posts = profile.latestPosts || profile.posts || profile.recentPosts || [];
+    const reels = posts.filter(p => p.type === 'Video' || p.videoUrl || p.isVideo || p.productType === 'clips');
+    const recentPosts = posts.slice(0, 12); // Last 12 posts for averages
+
+    // Calculate metrics
+    const followersCount = profile.followersCount || profile.followers || profile.follower_count || 0;
+    const followingCount = profile.followsCount || profile.following || profile.following_count || 0;
+    const postsCount = profile.postsCount || profile.posts_count || profile.mediaCount || 0;
+
+    // Avg views, likes, comments from recent posts
+    const viewCounts = recentPosts.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
+    const likeCounts = recentPosts.map(p => p.likesCount || p.likes || p.like_count || 0);
+    const commentCounts = recentPosts.map(p => p.commentsCount || p.comments || p.comment_count || 0);
+
+    const avgViews = viewCounts.length > 0 ? Math.round(viewCounts.reduce((a, b) => a + b, 0) / viewCounts.length) : 0;
+    const avgLikes = likeCounts.length > 0 ? Math.round(likeCounts.reduce((a, b) => a + b, 0) / likeCounts.length) : 0;
+    const avgComments = commentCounts.length > 0 ? Math.round(commentCounts.reduce((a, b) => a + b, 0) / commentCounts.length) : 0;
+
+    // Engagement rate
+    const engagementRate = followersCount > 0 ? ((avgLikes + avgComments) / followersCount * 100).toFixed(2) : 0;
+
+    // Posting frequency (posts in last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentPostsLast30 = posts.filter(p => {
+      const ts = new Date(p.timestamp || p.taken_at || p.date || 0);
+      return ts > thirtyDaysAgo;
+    });
+    const postingFrequency = recentPostsLast30.length;
+
+    // Top hashtags
+    const allHashtags = [];
+    posts.forEach(p => {
+      const caption = p.caption || p.text || '';
+      const tags = caption.match(/#[\w\u0900-\u097F]+/g) || [];
+      allHashtags.push(...tags.map(t => t.toLowerCase()));
+    });
+    const hashtagCounts = {};
+    allHashtags.forEach(t => { hashtagCounts[t] = (hashtagCounts[t] || 0) + 1; });
+    const topHashtags = Object.entries(hashtagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([tag, count]) => ({ tag, count }));
+
+    // Views trend (per post, chronological)
+    const viewsTrend = recentPosts.slice().reverse().map(p => ({
+      views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+      likes: p.likesCount || p.likes || p.like_count || 0,
+      date: p.timestamp || p.taken_at || p.date || null,
+    }));
+
+    const result = {
+      username: profile.username || cleanUsername,
+      fullName: profile.fullName || profile.full_name || '',
+      biography: profile.biography || profile.bio || '',
+      profilePicUrl: profile.profilePicUrl || profile.profilePicUrlHD || profile.profile_pic_url || '',
+      isVerified: profile.verified || profile.isVerified || false,
+      isBusinessAccount: profile.isBusinessAccount || profile.is_business || false,
+      businessCategory: profile.businessCategoryName || profile.category || '',
+      externalUrl: profile.externalUrl || profile.external_url || '',
+
+      // Key metrics
+      followersCount,
+      followingCount,
+      postsCount,
+      avgViews,
+      avgLikes,
+      avgComments,
+      engagementRate: parseFloat(engagementRate),
+      postingFrequency,
+      topHashtags,
+      viewsTrend,
+
+      // Raw post data for frontend charts
+      recentPosts: recentPosts.slice(0, 12).map(p => ({
+        caption: (p.caption || p.text || '').slice(0, 100),
+        likes: p.likesCount || p.likes || p.like_count || 0,
+        comments: p.commentsCount || p.comments || p.comment_count || 0,
+        views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+        date: p.timestamp || p.taken_at || p.date || null,
+        type: p.type || (p.videoUrl ? 'Video' : 'Image'),
+        thumbnailUrl: p.displayUrl || p.thumbnail_url || p.url || '',
+      })),
+    };
+
+    console.log(`✅ Profile analytics done for @${cleanUsername}. Followers: ${followersCount}, ER: ${engagementRate}%`);
+    res.json({ success: true, profile: result });
+
+  } catch (err) {
+    console.error('❌ Profile analytics error:', err.message);
+    res.status(500).json({ error: err.message || 'Could not fetch profile analytics' });
+  }
+});
+
 // ─── Instagram URL download helper ──────────────────────────────────────────
 
 // Extract the shortcode from any Instagram reel/post URL
