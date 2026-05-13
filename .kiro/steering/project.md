@@ -103,6 +103,7 @@ Video File / Instagram URL
 | `MAX_ANALYSES_PER_DAY` | Daily limit (0 = disabled) |
 | `MAX_ANALYSES_PER_MONTH` | Monthly limit (0 = disabled) |
 | `YTDLP_PATH` | Optional: explicit path to yt-dlp binary |
+| `APIFY_API_TOKEN` | Apify API token for Instagram reel download (primary strategy) |
 
 ---
 
@@ -158,12 +159,15 @@ These two emails bypass all limits. Add more to `UNLIMITED_EMAILS` as needed.
 
 ## Instagram URL Download
 
-Three strategies tried in order (server.js `downloadInstagramReel`):
-1. **Cobalt API** (`api.cobalt.tools`) — tried twice with 2s pause
-2. **yt-dlp** — binary resolved at startup from `/app/bin/yt-dlp` (installed by postinstall script)
-3. **yt-dlp-wrap** npm package — self-downloads binary from GitHub as last resort
+Four strategies tried in order (server.js `downloadInstagramReel`):
+1. **Apify** (`apify/instagram-scraper` actor) — primary strategy, uses residential proxies that Instagram doesn't block. Requires `APIFY_API_TOKEN` env var. Extracts video CDN URL from reel, then downloads locally. ~$0.05–0.10 per reel. Free tier ($5/month) = ~50–100 reels.
+2. **Cobalt API** (`api.cobalt.tools`) — tried twice with 2s pause (fallback)
+3. **yt-dlp** — binary resolved at startup from `/app/bin/yt-dlp` (installed by postinstall script)
+4. **yt-dlp-wrap** npm package — self-downloads binary from GitHub as last resort
 
-**Known issue:** Instagram aggressively blocks Railway datacenter IPs. All three strategies may fail for private/blocked reels. The recommended fix (not yet implemented) is to use a RapidAPI Instagram downloader service or route yt-dlp through a residential proxy.
+**Dependencies:** `apify-client` npm package added for Strategy 1.
+
+**Known issue:** Strategies 2–4 often fail because Instagram blocks Railway datacenter IPs. Apify (Strategy 1) resolves this by running on proxied infrastructure.
 
 ---
 
@@ -291,7 +295,7 @@ On the results page, when a video was just uploaded (current session):
 
 - **Indian ISP blocking Railway** — Many Indian ISPs (Jio, Airtel, Vi) block `*.up.railway.app` domains. Custom domain `api.creatorlyai.in` is being set up (CNAME → `i1uwfu0h.up.railway.app`) to bypass this. Once DNS propagates, `API_BASE` in `app.js` must be switched to `https://api.creatorlyai.in`.
 - **Railway idle timeout** — Container sleeps after ~17 seconds of inactivity on the hobby plan ($5/month credit). Wakes on request but Indian users can't trigger wake-up due to ISP blocking.
-- **Instagram URL blocking** — Railway IPs are blocked by Instagram. Need RapidAPI or residential proxy solution.
+- **Instagram URL blocking** — ~~Railway IPs are blocked by Instagram.~~ **Resolved** by adding Apify as primary download strategy (uses residential proxies). Cobalt/yt-dlp remain as fallbacks.
 - **yt-dlp-wrap deprecated** — npm warns `yt-dlp-wrap@2.3.12` is no longer supported. Works for now but may need replacing.
 - **`fluent-ffmpeg` deprecated** — npm warns about this too. Works fine currently.
 - **Google OAuth test users** — while the Google Cloud OAuth app is in "testing" mode, only added test users can sign in with Google. Need to publish the app for all users.
