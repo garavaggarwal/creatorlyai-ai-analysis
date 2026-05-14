@@ -1,4 +1,28 @@
 /* ── Prompt Generator Page ── */
+.top-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--bg, #0f0f1a);
+  border-bottom: 1px solid var(--border, #2d2d44);
+  z-index: 100;
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text, #fff);
+}
+.header-logo-text {
+  font-size: 1.1rem;
+}
+
 .pg-main {
   padding: 70px 16px 100px;
   max-width: 480px;
