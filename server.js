@@ -435,8 +435,8 @@ app.post('/api/profile-analytics', async (req, res) => {
       reachEfficiency: parseFloat(reachEfficiency),
       viewsTrend,
 
-      // Raw post data for frontend
-      recentPosts: last10.map(p => ({
+      // Raw post data for frontend (images/carousels only)
+      recentPosts: posts.filter(p => !(p.type === 'Video' || p.videoUrl || p.isVideo || p.productType === 'clips')).slice(0, 10).map(p => ({
         caption: (p.caption || p.text || '').slice(0, 100),
         likes: p.likesCount || p.likes || p.like_count || 0,
         comments: p.commentsCount || p.comments || p.comment_count || 0,
@@ -444,9 +444,23 @@ app.post('/api/profile-analytics', async (req, res) => {
         shares: p.sharesCount || p.shares || p.share_count || 0,
         saves: p.savesCount || p.saves || p.save_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,
-        type: p.type || (p.videoUrl ? 'Video' : 'Image'),
+        type: 'Image',
         thumbnailUrl: p.displayUrl || p.thumbnailUrl || p.thumbnail_src || p.imageUrl || p.display_url || '',
         postUrl: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '')),
+      })),
+
+      // Reels data for frontend (videos only)
+      recentReels: reels.slice(0, 10).map(p => ({
+        caption: (p.caption || p.text || '').slice(0, 100),
+        likes: p.likesCount || p.likes || p.like_count || 0,
+        comments: p.commentsCount || p.comments || p.comment_count || 0,
+        views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+        shares: p.sharesCount || p.shares || p.share_count || 0,
+        saves: p.savesCount || p.saves || p.save_count || 0,
+        date: p.timestamp || p.taken_at || p.date || null,
+        type: 'Video',
+        thumbnailUrl: p.displayUrl || p.thumbnailUrl || p.thumbnail_src || p.imageUrl || p.display_url || '',
+        postUrl: p.url || (p.shortCode ? `https://www.instagram.com/reel/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/reel/${p.shortcode}/` : '')),
       })),
     };
 

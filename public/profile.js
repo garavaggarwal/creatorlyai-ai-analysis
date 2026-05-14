@@ -234,6 +234,28 @@ function renderProfile(p) {
       </a>
     `;
   }).join('') || '<p style="color:var(--text-dim)">No recent posts found</p>';
+
+  // Recent Reels — separate section for video content
+  document.getElementById('reelsGrid').innerHTML = (p.recentReels || []).map(reel => {
+    const link = reel.postUrl || `https://www.instagram.com/${p.username}/reels/`;
+    const thumbSrc = reel.thumbnailUrl ? `${API_BASE}/api/image-proxy?url=${encodeURIComponent(reel.thumbnailUrl)}` : '';
+    const thumbHtml = thumbSrc
+      ? `<img class="post-thumb-img" src="${thumbSrc}" alt="Reel" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="post-thumb-fallback" style="display:none">🎬</div>`
+      : `<div class="post-thumb-fallback">🎬</div>`;
+    return `
+      <a href="${link}" target="_blank" rel="noopener" class="post-item">
+        <div class="post-thumb-wrap">
+          ${thumbHtml}
+          <div class="reel-play-icon">▶</div>
+        </div>
+        <div class="post-stats">
+          <span class="post-stat">❤️ ${formatNum(reel.likes)}</span>
+          <span class="post-stat">💬 ${formatNum(reel.comments)}</span>
+          ${reel.views > 0 ? `<span class="post-stat">👁 ${formatNum(reel.views)}</span>` : ''}
+        </div>
+      </a>
+    `;
+  }).join('') || '<p style="color:var(--text-dim)">No reels found</p>';
 }
 
 function renderChart(trend) {
