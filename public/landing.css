@@ -86,6 +86,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 .btn-ghost { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; text-decoration: none; border-bottom: 1px solid transparent; transition: color 0.2s, border-color 0.2s; }
 .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
 
+.hero-extra-btns { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.btn-secondary-lg { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 999px; color: var(--text); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 12px 24px; text-decoration: none; transition: transform 0.2s, background 0.2s, border-color 0.2s; }
+.btn-secondary-lg:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); border-color: var(--accent); }
+
 /* ── 3D Stats ── */
 .stats-row {
   display: grid;
