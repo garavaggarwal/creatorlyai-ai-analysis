@@ -187,9 +187,9 @@
     <!-- ── RESULTS ── -->
     <div id="resultsSection" hidden>
 
-      <!-- Overall Score -->
-      <div class="card score-card">
-        <div class="score-left">
+      <!-- 1. VERDICT — Score + Viral Potential (action-first) -->
+      <div class="card verdict-card">
+        <div class="verdict-top">
           <div class="result-thumb-wrap" id="resultThumbWrap" hidden>
             <img class="result-thumb" id="resultThumb" alt="Video thumbnail" />
           </div>
@@ -200,89 +200,37 @@
             </svg>
             <div class="score-number" id="overallScore">—</div>
           </div>
-          <div class="score-meta">
-            <div class="score-label">Overall Score</div>
+          <div class="verdict-meta">
+            <div class="perf-badge" id="perfBadge"></div>
             <div class="score-verdict" id="scoreVerdict"></div>
+            <p class="overall-summary" id="overallSummary"></p>
           </div>
-        </div>
-        <div class="score-right">
-          <div class="perf-badge" id="perfBadge"></div>
-          <p class="overall-summary" id="overallSummary"></p>
         </div>
       </div>
 
-      <!-- Video Summary -->
-      <div class="card summary-card" id="summaryCard" hidden>
+      <!-- 2. TOP 3 FIXES — Immediately actionable -->
+      <div class="card fixes-card-full">
         <div class="card-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">What Your Video Is About</h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Fix These to Go Viral</h3>
         </div>
-        <p class="video-summary-text" id="videoSummaryText"></p>
+        <ul class="bullet-list fixes-list" id="fixesList"></ul>
       </div>
 
-      <!-- Top Wins & Fixes -->
-      <div class="two-col">
-        <div class="card wins-card">
-          <div class="card-title-row">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <h3 class="card-title" style="margin-bottom:0">Top 3 Wins</h3>
-          </div>
-          <ul class="bullet-list wins-list" id="winsList"></ul>
-        </div>
-        <div class="card fixes-card">
-          <div class="card-title-row">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-            <h3 class="card-title" style="margin-bottom:0">Top 3 Fixes</h3>
-          </div>
-          <ul class="bullet-list fixes-list" id="fixesList"></ul>
-        </div>
-      </div>
-
-      <!-- Score Breakdown -->
-      <div class="card breakdown-card">
+      <!-- 3. HOOK REWRITE — Better opening suggestions -->
+      <div class="card hook-rewrite-card" id="hookRewriteCard" hidden>
         <div class="card-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">Score Breakdown</h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Better Hook Ideas</h3>
         </div>
-        <!-- Horizontally scrollable score chips -->
-        <div class="breakdown-scroll" id="breakdownScroll"></div>
-        <!-- Detail card for selected metric -->
-        <div class="breakdown-detail" id="breakdownDetail" hidden></div>
+        <p class="hook-rewrite-sub">Rewrite your opening to grab attention faster</p>
+        <div id="hookRewrites"></div>
       </div>
 
-      <!-- Suggested Captions & Hashtags -->
-      <div class="card suggestions-card" id="suggestionsCard" hidden>
-        <div class="card-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">Suggested Captions & Hashtags</h3>
-        </div>
-        <div class="suggestions-grid">
-          <div class="suggestion-col" id="suggestedCaptionsCol" hidden>
-            <div class="suggestion-label-row">
-              <span class="suggestion-label">Caption Ideas</span>
-              <button class="copy-all-btn" id="copyAllCaptions">Copy All</button>
-            </div>
-            <div class="captions-scroll" id="suggestedCaptions"></div>
-          </div>
-          <div class="suggestion-col" id="suggestedHashtagsCol" hidden>
-            <div class="suggestion-label-row">
-              <span class="suggestion-label">Trending Hashtags</span>
-              <button class="copy-all-btn" id="copyAllHashtags">Copy All</button>
-            </div>
-            <div class="hashtags-scroll">
-              <div class="tag-list" id="suggestedHashtags"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Video Player + Sync Timeline -->
+      <!-- 4. TIMELINE DIAGNOSTICS — Before deep metrics -->
       <div class="card timeline-card" id="timelineCard" hidden>
-        <!-- Video Player (only shown when video is available in current session) -->
         <div class="video-player-wrap" id="videoPlayerWrap" hidden>
-          <video class="video-player" id="videoPlayer" playsinline preload="metadata">
-            Your browser does not support the video tag.
-          </video>
+          <video class="video-player" id="videoPlayer" playsinline preload="metadata"></video>
           <div class="video-controls">
             <button class="video-play-btn" id="videoPlayBtn" aria-label="Play/Pause">
               <svg class="play-icon" id="playIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -291,17 +239,16 @@
             <span class="video-time" id="videoTime">0:00 / 0:00</span>
           </div>
         </div>
-
         <div class="timeline-header">
           <div class="card-title-row" style="margin-bottom:0">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <h3 class="card-title" style="margin-bottom:0">Content Sync Timeline</h3>
+            <h3 class="card-title" style="margin-bottom:0">Retention Timeline</h3>
           </div>
           <div class="sync-score-badge" id="syncScoreBadge"></div>
         </div>
-        <p class="timeline-sub">Shows where video, audio and text are in sync — and where they're not.</p>
+        <p class="timeline-sub">Where viewers drop off and where they stay engaged.</p>
         <div class="timeline-legend">
-          <span class="legend-item"><span class="legend-dot ok"></span> In Sync</span>
+          <span class="legend-item"><span class="legend-dot ok"></span> Engaged</span>
           <span class="legend-item"><span class="legend-dot audio_issue"></span> Audio Issue</span>
           <span class="legend-item"><span class="legend-dot text_issue"></span> Text Issue</span>
           <span class="legend-item"><span class="legend-dot visual_issue"></span> Visual Issue</span>
@@ -318,7 +265,35 @@
         <div class="timeline-issues" id="timelineIssues"></div>
       </div>
 
-      <!-- Video Info -->
+      <!-- 5. TOP 3 WINS -->
+      <div class="card wins-card">
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">What's Working</h3>
+        </div>
+        <ul class="bullet-list wins-list" id="winsList"></ul>
+      </div>
+
+      <!-- 6. SCORE BREAKDOWN — Deep metrics (below actions) -->
+      <div class="card breakdown-card">
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Deep Metrics</h3>
+        </div>
+        <div class="breakdown-scroll" id="breakdownScroll"></div>
+        <div class="breakdown-detail" id="breakdownDetail" hidden></div>
+      </div>
+
+      <!-- 7. SUGGESTED CAPTIONS -->
+      <div class="card suggestions-card" id="suggestionsCard" hidden>
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Caption Ideas</h3>
+        </div>
+        <div class="captions-scroll" id="suggestedCaptions"></div>
+      </div>
+
+      <!-- 8. VIDEO INFO (last) -->
       <div class="card video-info-card">
         <div class="card-title-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>

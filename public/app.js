@@ -885,31 +885,25 @@ function renderResults(r) {
     scoreEl.textContent = '—';
   }
 
-  // Verdict
+  // Verdict — action-oriented labels
   document.getElementById('scoreVerdict').textContent =
-    score >= 8 ? 'Excellent' : score >= 6.5 ? 'Good' : score >= 5 ? 'Average' : 'Needs Work';
+    score >= 8 ? 'Viral Potential 🔥' : score >= 6.5 ? 'Strong Content' : score >= 5 ? 'Good Foundation' : 'Needs Rework';
 
   // Performance badge
   const perf = r.predicted_performance || '';
   const perfBadge = document.getElementById('perfBadge');
   const perfMap = {
     viral_potential: ['🔥 Viral Potential', 'perf-viral'],
-    above_average:   ['⬆️ Above Average',   'perf-above'],
-    average:         ['➡️ Average',          'perf-average'],
-    below_average:   ['⬇️ Below Average',    'perf-below'],
+    above_average:   ['📈 High Reach', 'perf-above'],
+    average:         ['⚡ Good Foundation', 'perf-average'],
+    below_average:   ['🔧 Needs Rework', 'perf-below'],
   };
-  const [label, cls] = perfMap[perf] || ['—', 'perf-average'];
+  const [label, cls] = perfMap[perf] || ['⚡ Analysed', 'perf-average'];
   perfBadge.textContent = label;
   perfBadge.className = `perf-badge ${cls}`;
 
   // Overall summary
   document.getElementById('overallSummary').textContent = r.overall_summary || '';
-
-  // Video summary
-  if (r.video_summary) {
-    document.getElementById('summaryCard').hidden = false;
-    document.getElementById('videoSummaryText').textContent = r.video_summary;
-  }
 
   // Wins & Fixes
   renderList('winsList', r.top_3_wins || []);
@@ -963,35 +957,30 @@ function renderResults(r) {
   // Caption analysis — removed from results page
   // Hashtag analysis — removed from results page
 
-  // Suggested captions & hashtags
+  // Suggested captions (no hashtags)
   const hasSugCaptions = r.suggested_captions && r.suggested_captions.length > 0;
-  const hasSugHashtags = r.suggested_hashtags && r.suggested_hashtags.length > 0;
-  if (hasSugCaptions || hasSugHashtags) {
+  if (hasSugCaptions) {
     document.getElementById('suggestionsCard').hidden = false;
-    if (hasSugCaptions) {
-      document.getElementById('suggestedCaptionsCol').hidden = false;
-      document.getElementById('suggestedCaptions').innerHTML = r.suggested_captions.map((c, i) =>
-        `<div class="caption-suggestion">
-          <span class="caption-num">${i + 1}</span>
-          <span class="caption-text">${c}</span>
-          <button class="copy-btn" onclick="copyText(this, '${c.replace(/'/g, "\\'")}')">Copy</button>
-        </div>`
-      ).join('');
-      document.getElementById('copyAllCaptions').onclick = () => {
-        copyText(document.getElementById('copyAllCaptions'), r.suggested_captions.join('\n\n'));
-      };
-    }
-    if (hasSugHashtags) {
-      document.getElementById('suggestedHashtagsCol').hidden = false;
-      document.getElementById('suggestedHashtags').innerHTML = r.suggested_hashtags.map(t => {
-        const tag = t.startsWith('#') ? t : '#' + t;
-        return `<span class="tag good copyable-tag" onclick="copyText(this, '${tag}')">${tag}</span>`;
-      }).join('');
-      document.getElementById('copyAllHashtags').onclick = () => {
-        const all = r.suggested_hashtags.map(t => t.startsWith('#') ? t : '#' + t).join(' ');
-        copyText(document.getElementById('copyAllHashtags'), all);
-      };
-    }
+    document.getElementById('suggestedCaptions').innerHTML = r.suggested_captions.map((c, i) =>
+      `<div class="caption-suggestion">
+        <span class="caption-num">${i + 1}</span>
+        <span class="caption-text">${c}</span>
+        <button class="copy-btn" onclick="copyText(this, '${c.replace(/'/g, "\\'")}')">Copy</button>
+      </div>`
+    ).join('');
+  }
+
+  // Hook Rewrite section — better opening suggestions from hook analysis
+  const hookData = r.hook;
+  const hookRewriteCard = document.getElementById('hookRewriteCard');
+  if (hookData && hookData.improvements && hookData.improvements.length > 0) {
+    hookRewriteCard.hidden = false;
+    document.getElementById('hookRewrites').innerHTML = hookData.improvements.map((fix, i) =>
+      `<div class="hook-rewrite-item">
+        <span class="hook-rewrite-num">${i + 1}</span>
+        <span class="hook-rewrite-text">${fix}</span>
+      </div>`
+    ).join('');
   }
 
   // Video info
