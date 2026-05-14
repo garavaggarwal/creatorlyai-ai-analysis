@@ -98,7 +98,7 @@ async function fetchProfile(username) {
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     const resp = await fetch(`${API_BASE}/api/profile-analytics`, {
       method: 'POST',
