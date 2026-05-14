@@ -300,6 +300,35 @@ app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
+// ─── Image proxy (for Instagram profile pics that block cross-origin) ─────────
+app.get('/api/image-proxy', async (req, res) => {
+  const imageUrl = req.query.url;
+  if (!imageUrl) return res.status(400).send('No URL');
+  
+  try {
+    const https = require('https');
+    const http = require('http');
+    const protocol = imageUrl.startsWith('https') ? https : http;
+    
+    protocol.get(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+        'Referer': 'https://www.instagram.com/',
+      }
+    }, (proxyRes) => {
+      if (proxyRes.statusCode === 301 || proxyRes.statusCode === 302) {
+        // Follow redirect
+        return res.redirect(proxyRes.headers.location);
+      }
+      res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      proxyRes.pipe(res);
+    }).on('error', () => res.status(502).send('Failed'));
+  } catch (_) {
+    res.status(502).send('Failed');
+  }
+});
+
 // ─── Niche detection helper ───────────────────────────────────────────────────
 function detectNiche(bioText, posts) {
   const nicheKeywords = {

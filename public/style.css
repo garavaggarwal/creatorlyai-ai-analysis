@@ -2384,3 +2384,29 @@ body { padding-bottom: 80px; }
   .player-video { max-height: 320px; }
   .tl2-header, .tl2-sub, .tl2-bar-wrap, .tl2-issues { padding-left: 16px; padding-right: 16px; }
 }
+
+
+/* ── Nav Profile Avatar ── */
+.nav-profile-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--accent2);
+}
+#navProfileLabel {
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.62rem;
+}

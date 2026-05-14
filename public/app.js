@@ -102,8 +102,26 @@ function renderSidebarUser() {
 document.addEventListener('DOMContentLoaded', () => {
   renderHeaderUser();
   renderSidebarUser();
+  renderNavProfilePic();
   fetchCredits();
 });
+
+/* ── Show Instagram profile pic in bottom nav ── */
+function renderNavProfilePic() {
+  const navProfileAvatar = document.getElementById('navProfileAvatar');
+  const navProfileLabel = document.getElementById('navProfileLabel');
+  if (!navProfileAvatar) return;
+  
+  const savedPic = localStorage.getItem('creatorly_ig_pic');
+  const savedUsername = localStorage.getItem('creatorly_ig_username');
+  
+  if (savedPic) {
+    navProfileAvatar.innerHTML = `<img src="${savedPic}" class="nav-profile-img" alt="" onerror="this.parentElement.innerHTML='<svg width=22 height=22 viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2&quot;/><circle cx=&quot;12&quot; cy=&quot;7&quot; r=&quot;4&quot;/></svg>'" />`;
+  }
+  if (savedUsername && navProfileLabel) {
+    navProfileLabel.textContent = '@' + savedUsername;
+  }
+}
 
 /* ── Credits bar ── */
 async function fetchCredits() {

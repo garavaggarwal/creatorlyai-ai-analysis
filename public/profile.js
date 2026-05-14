@@ -135,10 +135,13 @@ function renderProfile(p) {
   const avatar = document.getElementById('profileAvatar');
   const avatarFallback = document.getElementById('profileAvatarFallback');
   if (p.profilePicUrl) {
-    avatar.src = `${API_BASE}/api/image-proxy?url=${encodeURIComponent(p.profilePicUrl)}`;
+    const proxiedUrl = `${API_BASE}/api/image-proxy?url=${encodeURIComponent(p.profilePicUrl)}`;
+    avatar.src = proxiedUrl;
     avatar.style.display = 'block';
     avatarFallback.style.display = 'none';
     avatar.onerror = () => { avatar.style.display = 'none'; avatarFallback.style.display = 'flex'; };
+    // Save proxied URL for bottom nav usage
+    localStorage.setItem('creatorly_ig_pic', proxiedUrl);
   } else {
     avatar.style.display = 'none';
     avatarFallback.style.display = 'flex';
