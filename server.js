@@ -366,15 +366,15 @@ app.post('/api/profile-analytics', async (req, res) => {
 
     const profile = items[0];
     console.log('📋 Profile keys:', Object.keys(profile).join(', '));
-    if (posts.length > 0) {
-      console.log('📋 First post keys:', Object.keys(posts[0]).join(', '));
-      console.log('📋 First post type/video fields:', JSON.stringify({ type: posts[0].type, videoUrl: !!posts[0].videoUrl, isVideo: posts[0].isVideo, productType: posts[0].productType, videoViewCount: posts[0].videoViewCount, playCount: posts[0].playCount }));
-    }
 
     // Extract recent posts/reels for metrics calculation
-    const posts = profile.latestPosts || profile.posts || profile.recentPosts || [];
+    const allPosts = profile.latestPosts || profile.posts || profile.recentPosts || [];
+    if (allPosts.length > 0) {
+      console.log('📋 First post keys:', Object.keys(allPosts[0]).join(', '));
+      console.log('📋 First post type/video fields:', JSON.stringify({ type: allPosts[0].type, videoUrl: !!allPosts[0].videoUrl, isVideo: allPosts[0].isVideo, productType: allPosts[0].productType, videoViewCount: allPosts[0].videoViewCount, playCount: allPosts[0].playCount }));
+    }
     // Reels have video views/play counts; regular posts don't
-    const reels = posts.filter(p => 
+    const reels = allPosts.filter(p => 
       p.type === 'Video' || p.videoUrl || p.isVideo || 
       p.productType === 'clips' || p.productType === 'reels' ||
       (p.videoViewCount && p.videoViewCount > 0) || 
@@ -382,8 +382,8 @@ app.post('/api/profile-analytics', async (req, res) => {
       (p.playCount && p.playCount > 0) ||
       (p.views && p.views > 0)
     );
-    const imagePosts = posts.filter(p => !reels.includes(p));
-    const last10 = posts.slice(0, 10); // Last 10 posts for averages
+    const imagePosts = allPosts.filter(p => !reels.includes(p));
+    const last10 = allPosts.slice(0, 10); // Last 10 posts for averages
 
     // Basic counts
     const followersCount = profile.followersCount || profile.followers || profile.follower_count || 0;
@@ -415,7 +415,7 @@ app.post('/api/profile-analytics', async (req, res) => {
     // Niche detection from bio + captions
     const bioText = (profile.biography || profile.bio || '').toLowerCase();
     const businessCat = profile.businessCategoryName || profile.category || '';
-    const niche = businessCat || detectNiche(bioText, posts);
+    const niche = businessCat || detectNiche(bioText, allPosts);
 
     // Views trend (per post, chronological)
     const viewsTrend = last10.slice().reverse().map(p => ({
