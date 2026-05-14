@@ -1,5 +1,5 @@
 /* ── Config ── */
-const API_BASE = 'https://web-production-7bc95.up.railway.app';
+const API_BASE = 'https://api.creatorlyai.in';
 
 /* ── Auth check — redirect to login if not logged in ── */
 (function checkAuth() {

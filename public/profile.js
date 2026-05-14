@@ -1,5 +1,5 @@
 /* ── Profile Analytics Page ── */
-const API_BASE = 'https://web-production-7bc95.up.railway.app';
+const API_BASE = 'https://api.creatorlyai.in';
 
 // Auth check
 (function checkAuth() {
