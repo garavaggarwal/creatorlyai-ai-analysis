@@ -97,11 +97,17 @@ async function fetchProfile(username) {
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const resp = await fetch(`${API_BASE}/api/profile-analytics`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ username }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const json = await resp.json();
 
@@ -116,7 +122,11 @@ async function fetchProfile(username) {
   } catch (err) {
     skeletonLoading.hidden = true;
     profileError.hidden = false;
-    profileErrorMsg.textContent = err.message;
+    if (err.name === 'AbortError') {
+      profileErrorMsg.textContent = 'Request timed out. Server may be unavailable. Try again.';
+    } else {
+      profileErrorMsg.textContent = err.message || 'Something went wrong';
+    }
   }
 }
 
