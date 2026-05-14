@@ -4,7 +4,7 @@ This file gives full context to any Kiro instance working on this project. Read 
 
 ---
 
-## What This Project Is
+## What This Project Is 
 
 **Creatorly AI** is a "Video Lab" SaaS tool for Indian Instagram/Reels creators. Users upload a video (or paste an Instagram URL) and get a deep AI-powered analysis — hook strength, retention, audio sync, editing quality, trend-fit score, suggested captions, hashtags, and a sync timeline. The result is called the **Creatorly Score**.
 
@@ -91,7 +91,17 @@ Video File / Instagram URL
   → Return to frontend
 ```
 
-**Gemini model** is configurable via `GEMINI_MODEL` env var on Railway. Current recommended: `gemini-2.5-flash-preview-05-20`. Falls back through `gemini-1.5-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-pro` if unavailable. The text analyser also uses `GEMINI_MODEL` (previously hardcoded to `gemini-1.5-flash` which returned 404).
+**Gemini model** is configurable via `GEMINI_MODEL` env var on Railway. Current recommended: `gemini-2.5-flash-preview-05-20`. Falls back through `gemini-1.5-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-pro` if unavailable. The text analyser also uses `GEMINI_MODEL`.
+
+### Gemini Prompt Tone Rules
+- Talk like an Instagram creator coach, NOT a video engineer
+- **NEVER** use: LUFS, pacing degradation, frame cadence, normalization, transformation resolution
+- If a metric is unavailable (N/A), skip it entirely — don't mention it
+- Never state uncertain interpretations as facts (use "may feel" not "completely")
+- Issue text: **under 10 words**
+- Fix text: **under 15 words**
+- Every improvement must reference a timestamp: "At [X]s: [issue]. Fix: [action]."
+- Niche-aware benchmarks (nature vs comedy vs educational)
 
 ---
 
@@ -212,12 +222,15 @@ When a user locks their screen or loses connection mid-analysis:
 - Fixed bottom nav bar with 4 items: Home, Analyse (+), History, Profile
 - Centre "Analyse" button has elevated purple circle design
 - Profile link navigates to `/profile` page
+- **Profile button shows Instagram profile pic** (proxied via `/api/image-proxy`, saved in localStorage)
+- Falls back to person icon SVG if no username connected or image fails
+- Shows `@username` below the pic when connected
 - Bottom nav hidden on desktop
 
 ### Navigation Logic (`navigateTo()`)
 - `'home'` → redirects to landing page (`/`)
-- `'analyse'` → shows upload/analysis view (default)
-- `'history'` → shows full-page history list, hides hero/main/footer
+- `'analyse'` → **always resets to upload view** (clears any previous results/errors)
+- `'history'` → shows full-page history list, re-fetches from API
 
 ---
 
@@ -246,16 +259,30 @@ When a user locks their screen or loses connection mid-analysis:
 
 ---
 
-## Video Player + Timeline Sync
+## Video Player + Timeline (Premium Redesign)
 
-On the results page, when a video was just uploaded (current session):
-- Video player shown above the sync timeline
-- Play/pause button with icon toggle
-- Time display (current / total)
-- Timeline playhead (white vertical line) moves in sync with video playback
-- Click anywhere on timeline bar to seek video
-- Video stored as Object URL in browser memory (not on server)
-- For history items: thumbnail shown, no video playback (file not stored)
+### Premium Video Player
+- Bigger player with rounded container and dark UI
+- Big play button overlay (disappears on play, reappears on pause/end)
+- Full controls: play/pause, current time, draggable scrubber, duration, mute, replay
+- Scrubber syncs bidirectionally with timeline playhead
+- Touch-friendly drag seeking for mobile
+- Video stored as Object URL in browser memory (current session only)
+
+### Interactive Timeline
+- Color-coded segments on timeline bar (green=good, yellow=audio, blue=text, red=visual)
+- Emoji markers on timeline (🔊 🎥 📝) — tappable/clickable
+- Clicking a marker jumps video to that timestamp and pauses
+- Expandable issue cards (collapsed by default, expand on tap)
+- Each card shows: timestamp, colored dot, issue title, "Jump to moment" button
+- No verbose text — short creator-friendly language only
+- Timeline bar is clickable to seek video
+
+### Issue Card UX
+- Default collapsed: "7.2s ● This part feels slow"
+- Expanded: action button "Jump to moment"
+- Cards animate on expand/collapse
+- Only one card expanded at a time
 
 ---
 
@@ -327,8 +354,11 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 - **Credits bar** at top showing "X used / 5 available" with purple gradient progress bar (fetches from `/api/usage`)
 - Submit button always says "Analyse Reel" (disabled until file selected / URL entered)
 - Progress card shows 3-step animation during analysis
-- Results: score ring + thumbnail, wins/fixes, horizontally scrollable score breakdown with detail card, suggested captions, suggested hashtags, sync timeline + video player, video info grid
-- **Section order**: Score ring → Wins/Fixes → Score Breakdown → Suggested Captions/Hashtags → Sync Timeline (above Video Info) → Video Info → Analyse Another
+- Results: verdict card (score + viral potential), top 3 fixes (action-first), hook rewrite section, retention timeline + video player, what's working (wins), deep metrics (score breakdown chips), caption ideas, video info
+- **Section order**: Verdict → Fix These to Go Viral → Better Hook Ideas → Retention Timeline → What's Working → Deep Metrics → Caption Ideas → Video Info → Analyse Another
+- **Verdict labels**: "Viral Potential 🔥" / "Strong Content" / "Good Foundation" / "Needs Rework"
+- **Performance badges**: "🔥 Viral Potential" / "📈 High Reach" / "⚡ Good Foundation" / "🔧 Needs Rework"
+- Hashtags section removed — replaced with Hook Rewrite section
 - Error card with "Try Again" button
 - History page (toggled via navigation, re-fetches on every open)
 - Desktop: left sidebar (collapsible), no top header
