@@ -1114,57 +1114,115 @@ function renderHashtagAnalysis(data) {
 /* ── Sync Timeline renderer ── */
 function renderSyncTimeline(td, syncPoints, syncScore) {
   const duration = td.duration;
-  const bar       = document.getElementById('timelineBar');
-  const markers   = document.getElementById('timelineMarkers');
-  const tStamps   = document.getElementById('timelineTimestamps');
+  const bar = document.getElementById('timelineBar');
+  const markers = document.getElementById('timelineMarkers');
+  const tStamps = document.getElementById('timelineTimestamps');
   const issuesList = document.getElementById('timelineIssues');
   const syncBadge = document.getElementById('syncScoreBadge');
-  const playhead  = document.getElementById('timelinePlayhead');
+  const playhead = document.getElementById('timelinePlayhead');
 
-  bar.innerHTML = markers.innerHTML = tStamps.innerHTML = issuesList.innerHTML = '';
-  // Re-add playhead after clearing
+  bar.innerHTML = '';
   bar.appendChild(playhead);
+  markers.innerHTML = '';
+  tStamps.innerHTML = '';
+  issuesList.innerHTML = '';
 
-  // ── Setup video player if video is available ──
+  // ── Premium Video Player Setup ──
   const videoPlayerWrap = document.getElementById('videoPlayerWrap');
   const videoPlayer = document.getElementById('videoPlayer');
   const videoPlayBtn = document.getElementById('videoPlayBtn');
+  const bigPlayBtn = document.getElementById('bigPlayBtn');
+  const playerOverlay = document.getElementById('playerOverlay');
   const playIcon = document.getElementById('playIcon');
   const pauseIcon = document.getElementById('pauseIcon');
-  const videoTime = document.getElementById('videoTime');
+  const videoTimeEl = document.getElementById('videoTime');
+  const videoDurationEl = document.getElementById('videoDuration');
+  const scrubberFill = document.getElementById('scrubberFill');
+  const scrubberThumb = document.getElementById('scrubberThumb');
+  const playerScrubber = document.getElementById('playerScrubber');
+  const muteBtn = document.getElementById('muteBtn');
+  const replayBtn = document.getElementById('replayBtn');
 
   if (currentVideoUrl && videoPlayer && videoPlayerWrap) {
     videoPlayer.src = currentVideoUrl;
     videoPlayerWrap.hidden = false;
 
-    // Play/Pause toggle
-    videoPlayBtn.onclick = () => {
-      if (videoPlayer.paused) {
-        videoPlayer.play();
-      } else {
-        videoPlayer.pause();
-      }
+    const togglePlay = () => {
+      if (videoPlayer.paused) { videoPlayer.play(); }
+      else { videoPlayer.pause(); }
     };
 
-    videoPlayer.onplay = () => { playIcon.hidden = true; pauseIcon.hidden = false; };
-    videoPlayer.onpause = () => { playIcon.hidden = false; pauseIcon.hidden = true; };
+    videoPlayBtn.onclick = togglePlay;
+    if (bigPlayBtn) bigPlayBtn.onclick = togglePlay;
+    if (playerOverlay) playerOverlay.onclick = togglePlay;
 
-    // Sync playhead with video time
+    videoPlayer.onplay = () => {
+      playIcon.hidden = true; pauseIcon.hidden = false;
+      if (playerOverlay) playerOverlay.classList.add('hidden');
+    };
+    videoPlayer.onpause = () => {
+      playIcon.hidden = false; pauseIcon.hidden = true;
+      if (playerOverlay) playerOverlay.classList.remove('hidden');
+    };
+    videoPlayer.onended = () => {
+      if (playerOverlay) playerOverlay.classList.remove('hidden');
+    };
+
+    // Time update — sync scrubber + playhead + time display
     videoPlayer.ontimeupdate = () => {
       if (videoPlayer.duration > 0) {
         const pct = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-        playhead.style.left = `${pct}%`;
-        videoTime.textContent = `${formatTime(videoPlayer.currentTime)} / ${formatTime(videoPlayer.duration)}`;
+        playhead.style.left = pct + '%';
+        if (scrubberFill) scrubberFill.style.width = pct + '%';
+        if (scrubberThumb) scrubberThumb.style.left = pct + '%';
+        if (videoTimeEl) videoTimeEl.textContent = formatTime(videoPlayer.currentTime);
       }
     };
+    videoPlayer.onloadedmetadata = () => {
+      if (videoDurationEl) videoDurationEl.textContent = formatTime(videoPlayer.duration);
+    };
 
-    // Click on timeline bar to seek
-    bar.style.cursor = 'pointer';
+    // Scrubber drag
+    if (playerScrubber) {
+      const seekFromEvent = (e) => {
+        const rect = playerScrubber.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        videoPlayer.currentTime = pct * videoPlayer.duration;
+      };
+      playerScrubber.onmousedown = (e) => {
+        seekFromEvent(e);
+        const onMove = (ev) => seekFromEvent(ev);
+        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      };
+      playerScrubber.ontouchstart = (e) => {
+        const touch = e.touches[0];
+        const rect = playerScrubber.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+        videoPlayer.currentTime = pct * videoPlayer.duration;
+      };
+    }
+
+    // Timeline bar click to seek
     bar.onclick = (e) => {
       const rect = bar.getBoundingClientRect();
       const pct = (e.clientX - rect.left) / rect.width;
       videoPlayer.currentTime = pct * videoPlayer.duration;
     };
+
+    // Mute
+    if (muteBtn) {
+      muteBtn.onclick = () => {
+        videoPlayer.muted = !videoPlayer.muted;
+        muteBtn.style.opacity = videoPlayer.muted ? '0.4' : '1';
+      };
+    }
+
+    // Replay
+    if (replayBtn) {
+      replayBtn.onclick = () => { videoPlayer.currentTime = 0; videoPlayer.play(); };
+    }
   } else {
     if (videoPlayerWrap) videoPlayerWrap.hidden = true;
     playhead.style.left = '0%';
@@ -1174,76 +1232,92 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
   if (syncScore != null) {
     const bc = syncScore >= 7 ? 'sync-good' : syncScore >= 5 ? 'sync-mid' : 'sync-bad';
     syncBadge.className = `sync-score-badge ${bc}`;
-    syncBadge.textContent = `Sync Score: ${syncScore}/10`;
+    syncBadge.textContent = `${syncScore}/10`;
   }
 
-  const statusColors = { ok: '#22c55e', audio_issue: '#f97316', text_issue: '#a855f7', visual_issue: '#ef4444' };
-
-  // Colored segments from Gemini
+  // Colored segments on timeline bar
+  const statusColors = { ok: '#22c55e', audio_issue: '#eab308', text_issue: '#6366f1', visual_issue: '#ef4444' };
   if (syncPoints && syncPoints.length > 0) {
     const sorted = [...syncPoints].sort((a, b) => a.timestamp - b.timestamp);
     sorted.forEach((pt, i) => {
       const nextTs = sorted[i + 1]?.timestamp ?? duration;
-      const left  = (pt.timestamp / duration) * 100;
+      const left = (pt.timestamp / duration) * 100;
       const width = ((nextTs - pt.timestamp) / duration) * 100;
       const color = statusColors[pt.status] || statusColors.ok;
       const seg = document.createElement('div');
-      seg.className = 'tl-segment';
-      seg.style.cssText = `left:${left}%;width:${width}%;background:${color};opacity:${pt.status === 'ok' ? 0.3 : 0.75}`;
-      seg.title = `${pt.timestamp}s — ${pt.status}: ${pt.note}`;
+      seg.style.cssText = `position:absolute;top:0;height:100%;left:${left}%;width:${width}%;background:${color};opacity:${pt.status === 'ok' ? 0.25 : 0.6};border-radius:4px;`;
       bar.appendChild(seg);
     });
-  } else {
-    const seg = document.createElement('div');
-    seg.className = 'tl-segment';
-    seg.style.cssText = `left:0%;width:100%;background:#22c55e;opacity:0.3`;
-    bar.appendChild(seg);
   }
 
-  // Scene cut markers (precise ffmpeg)
-  (td.scene_cuts || []).forEach(ts => {
+  // Issue markers (colored dots on timeline)
+  const issues = (syncPoints || []).filter(p => p.status !== 'ok');
+  const markerIcons = { audio_issue: '🔊', text_issue: '📝', visual_issue: '🎥', slow: '🐌', ending: '🎬' };
+
+  issues.forEach((pt, i) => {
+    const left = (pt.timestamp / duration) * 100;
     const m = document.createElement('div');
-    m.className = 'tl-marker scene-cut';
-    m.style.left = `${(ts / duration) * 100}%`;
-    m.title = `Scene cut at ${ts.toFixed(1)}s`;
+    m.className = `tl2-marker ${pt.status}`;
+    m.style.left = left + '%';
+    m.textContent = markerIcons[pt.status] || '⚠️';
+    m.onclick = () => {
+      if (videoPlayer && currentVideoUrl) {
+        videoPlayer.currentTime = pt.timestamp;
+        videoPlayer.pause();
+      }
+      // Expand the corresponding issue card
+      const cards = issuesList.querySelectorAll('.tl2-issue-card');
+      cards.forEach((c, ci) => c.classList.toggle('expanded', ci === i));
+    };
     markers.appendChild(m);
   });
 
-  // Silence overlays (precise ffmpeg)
-  (td.silence_segments || []).forEach(s => {
-    const el = document.createElement('div');
-    el.className = 'tl-silence';
-    el.style.cssText = `left:${(s.start / duration) * 100}%;width:${Math.max((s.duration / duration) * 100, 0.5)}%`;
-    el.title = `Silence: ${s.start.toFixed(1)}s – ${(s.start + s.duration).toFixed(1)}s`;
-    bar.appendChild(el);
-  });
+  // Timestamps
+  const stamps = [0, duration * 0.25, duration * 0.5, duration * 0.75, duration];
+  tStamps.innerHTML = stamps.map(t => `<span>${Math.round(t)}s</span>`).join('');
 
-  // Timestamp labels
-  const labelCount = Math.min(8, Math.floor(duration));
-  for (let i = 0; i <= labelCount; i++) {
-    const t = (i / labelCount) * duration;
-    const lbl = document.createElement('div');
-    lbl.className = 'tl-timestamp';
-    lbl.style.left = `${(t / duration) * 100}%`;
-    lbl.textContent = `${Math.round(t)}s`;
-    tStamps.appendChild(lbl);
-  }
-
-  // Issues list
-  const issues = (syncPoints || []).filter(p => p.status !== 'ok');
+  // Issue cards
   if (issues.length === 0) {
-    issuesList.innerHTML = '<div class="tl-all-good">✅ No sync issues detected across the timeline</div>';
+    issuesList.innerHTML = '<div class="tl2-all-good">✅ Your reel looks great — no issues found!</div>';
   } else {
-    issuesList.innerHTML = issues.map(p => {
-      const icon  = { audio_issue: '🔊', text_issue: '📝', visual_issue: '🎥' }[p.status] || '⚠️';
-      const lbl   = p.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      return `<div class="tl-issue">
-        <span class="tl-issue-time">${parseFloat(p.timestamp).toFixed(1)}s</span>
-        <span class="tl-issue-icon">${icon}</span>
-        <span class="tl-issue-label ${p.status}">${lbl}</span>
-        <span class="tl-issue-note">${p.note}</span>
-      </div>`;
+    issuesList.innerHTML = issues.map((pt, i) => {
+      const icon = markerIcons[pt.status] || '⚠️';
+      const time = parseFloat(pt.timestamp).toFixed(1);
+      const note = pt.note || 'Issue detected';
+      return `
+        <div class="tl2-issue-card" onclick="toggleIssueCard(this, ${pt.timestamp})">
+          <div class="tl2-issue-top">
+            <span class="tl2-issue-time">${time}s</span>
+            <span class="tl2-issue-dot ${pt.status}"></span>
+            <span class="tl2-issue-title">${note}</span>
+            <span class="tl2-issue-expand">▼</span>
+          </div>
+          <div class="tl2-issue-detail">
+            <div class="tl2-issue-actions">
+              <button class="tl2-action-btn primary" onclick="event.stopPropagation(); jumpToTime(${pt.timestamp})">Jump to moment</button>
+            </div>
+          </div>
+        </div>
+      `;
     }).join('');
+  }
+}
+
+// Toggle issue card expansion
+function toggleIssueCard(el, timestamp) {
+  const wasExpanded = el.classList.contains('expanded');
+  // Close all
+  el.parentElement.querySelectorAll('.tl2-issue-card').forEach(c => c.classList.remove('expanded'));
+  // Toggle this one
+  if (!wasExpanded) el.classList.add('expanded');
+}
+
+// Jump video to timestamp
+function jumpToTime(timestamp) {
+  const videoPlayer = document.getElementById('videoPlayer');
+  if (videoPlayer && currentVideoUrl) {
+    videoPlayer.currentTime = timestamp;
+    videoPlayer.pause();
   }
 }
 
