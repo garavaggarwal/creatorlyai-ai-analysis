@@ -376,7 +376,7 @@ A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-
 
 ## Known Issues / TODO
 
-- **Indian ISP blocking Railway** — Many Indian ISPs (Jio, Airtel, Vi) block `*.up.railway.app` domains. Custom domain `api.creatorlyai.in` is being set up (CNAME → `i1uwfu0h.up.railway.app`) to bypass this. Once DNS propagates, `API_BASE` in `app.js` must be switched to `https://api.creatorlyai.in`.
+- **Indian ISP blocking Railway** — ~~Many Indian ISPs block `*.up.railway.app` domains.~~ **RESOLVED**: Custom domain `api.creatorlyai.in` is active (CNAME → `i1uwfu0h.up.railway.app`). All `API_BASE` URLs now use `https://api.creatorlyai.in`.
 - **Railway idle timeout** — Container sleeps after ~17 seconds of inactivity on the hobby plan ($5/month credit). Wakes on request but Indian users can't trigger wake-up due to ISP blocking.
 - **Instagram URL blocking** — ~~Railway IPs are blocked by Instagram.~~ **Resolved** by adding Apify as primary download strategy (uses residential proxies). Cobalt/yt-dlp remain as fallbacks.
 - **yt-dlp-wrap deprecated** — npm warns `yt-dlp-wrap@2.3.12` is no longer supported. Works for now but may need replacing.
@@ -413,7 +413,33 @@ Indian ISPs block `*.up.railway.app`. To fix this:
 3. Once verified, update `API_BASE` in `public/app.js` to `https://api.creatorlyai.in`
 4. Also update CORS allowed origins in `server.js` (already added `https://api.creatorlyai.in`)
 
-**Status:** CNAME added on GoDaddy, waiting for Railway DNS verification (yellow triangle → green).
+**Status:** DNS verified, custom domain active. All `API_BASE` URLs switched to `https://api.creatorlyai.in`.
+
+---
+
+## Prompt Generator (`/prompt-generator`)
+
+- Page at `public/prompt-generator.html` + `prompt-generator.js` + `prompt-generator.css`
+- User describes reel idea (min 10 chars, max 500) + selects AI video tool (Runway, Kling, Sora, Pika, Vidu, Hailuo, or General)
+- Backend `POST /api/generate-prompts` sends to Gemini → returns 5 detailed video generation prompts
+- Each prompt displayed in a card with a "Copy" button
+- Auth-gated (redirects to login if not logged in)
+- Mobile-first dark UI matching existing design
+- Tools supported: Runway Gen-3, Kling AI, Sora, Pika, Vidu, Hailuo MiniMax, General
+- Prompts optimized for Indian audience, vertical video (9:16), Instagram Reels best practices
+
+---
+
+## Bottom Navigation (Mobile)
+
+Consistent 5-item bottom nav across all authenticated pages:
+1. **Home** — links to `/` (landing page)
+2. **Prompts** — links to `/prompt-generator`
+3. **Analyse** — center elevated purple circle button (links to `/analyser`)
+4. **History** — links to `/analyser#history`
+5. **Profile** — links to `/profile`
+
+Pages with this nav: `index.html` (analyser), `profile.html`, `prompt-generator.html`
 
 ---
 
