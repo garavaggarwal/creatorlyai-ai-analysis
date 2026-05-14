@@ -366,10 +366,23 @@ app.post('/api/profile-analytics', async (req, res) => {
 
     const profile = items[0];
     console.log('📋 Profile keys:', Object.keys(profile).join(', '));
+    if (posts.length > 0) {
+      console.log('📋 First post keys:', Object.keys(posts[0]).join(', '));
+      console.log('📋 First post type/video fields:', JSON.stringify({ type: posts[0].type, videoUrl: !!posts[0].videoUrl, isVideo: posts[0].isVideo, productType: posts[0].productType, videoViewCount: posts[0].videoViewCount, playCount: posts[0].playCount }));
+    }
 
     // Extract recent posts/reels for metrics calculation
     const posts = profile.latestPosts || profile.posts || profile.recentPosts || [];
-    const reels = posts.filter(p => p.type === 'Video' || p.videoUrl || p.isVideo || p.productType === 'clips');
+    // Reels have video views/play counts; regular posts don't
+    const reels = posts.filter(p => 
+      p.type === 'Video' || p.videoUrl || p.isVideo || 
+      p.productType === 'clips' || p.productType === 'reels' ||
+      (p.videoViewCount && p.videoViewCount > 0) || 
+      (p.video_view_count && p.video_view_count > 0) || 
+      (p.playCount && p.playCount > 0) ||
+      (p.views && p.views > 0)
+    );
+    const imagePosts = posts.filter(p => !reels.includes(p));
     const last10 = posts.slice(0, 10); // Last 10 posts for averages
 
     // Basic counts
@@ -436,7 +449,7 @@ app.post('/api/profile-analytics', async (req, res) => {
       viewsTrend,
 
       // Raw post data for frontend (images/carousels only)
-      recentPosts: posts.filter(p => !(p.type === 'Video' || p.videoUrl || p.isVideo || p.productType === 'clips')).slice(0, 10).map(p => ({
+      recentPosts: imagePosts.slice(0, 10).map(p => ({
         caption: (p.caption || p.text || '').slice(0, 100),
         likes: p.likesCount || p.likes || p.like_count || 0,
         comments: p.commentsCount || p.comments || p.comment_count || 0,
