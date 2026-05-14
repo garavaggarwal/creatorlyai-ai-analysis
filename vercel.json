@@ -60,6 +60,18 @@
       "dest": "/public/auth.js"
     },
     {
+      "src": "/prompt-generator",
+      "dest": "/public/prompt-generator.html"
+    },
+    {
+      "src": "/prompt-generator.css",
+      "dest": "/public/prompt-generator.css"
+    },
+    {
+      "src": "/prompt-generator.js",
+      "dest": "/public/prompt-generator.js"
+    },
+    {
       "src": "/profile.css",
       "dest": "/public/profile.css"
     },

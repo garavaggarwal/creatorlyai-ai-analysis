@@ -290,6 +290,11 @@ app.get('/analyser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ─── Prompt Generator page route ──────────────────────────────────────────────
+app.get('/prompt-generator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'prompt-generator.html'));
+});
+
 // ─── Profile page route ───────────────────────────────────────────────────────
 app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
@@ -1087,6 +1092,73 @@ app.post('/api/analyse-url', express.json(), async (req, res) => {
     res.status(500).json({ error: err.message || 'Analysis failed' });
   } finally {
     cleanupFiles(videoPath, framesDir);
+  }
+});
+
+// ─── Prompt Generator API ─────────────────────────────────────────────────────
+app.post('/api/generate-prompts', express.json(), async (req, res) => {
+  const { idea, tool = 'General' } = req.body || {};
+
+  if (!idea || idea.trim().length < 10) {
+    return res.status(400).json({ error: 'Please describe your reel idea (at least 10 characters)' });
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI not configured' });
+  }
+
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20' });
+
+    const toolContext = tool !== 'General'
+      ? `The prompts MUST be optimized for ${tool}'s specific syntax, capabilities, and best practices. Include tool-specific keywords and formatting that work best with ${tool}.`
+      : 'The prompts should be general-purpose and work with any AI video generation tool (Runway, Kling, Sora, Pika, etc.).';
+
+    const prompt = `You are an expert AI video prompt engineer specializing in creating viral Instagram Reels content for Indian creators.
+
+The user wants to create a reel about: "${idea.trim()}"
+Target AI video tool: ${tool}
+
+${toolContext}
+
+Generate exactly 5 detailed, ready-to-paste video generation prompts. Each prompt should:
+- Be 2-4 sentences long
+- Include specific visual details (camera angles, lighting, colors, movements)
+- Include mood/atmosphere descriptions
+- Be optimized for short-form vertical video (9:16 aspect ratio, 15-60 seconds)
+- Consider Indian audience aesthetics and trends
+- Be different from each other (different angles/styles/moods)
+
+Return ONLY a JSON array of 5 strings. No markdown, no explanation, just the JSON array.
+Example format: ["prompt 1 text here", "prompt 2 text here", ...]`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('Could not parse AI response');
+    }
+
+    const prompts = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(prompts) || prompts.length === 0) {
+      throw new Error('Invalid prompt format from AI');
+    }
+
+    console.log(`✨ Prompt generation done | Tool: ${tool} | Prompts: ${prompts.length} | User: ${userId}`);
+    res.json({ success: true, tool, prompts: prompts.slice(0, 5) });
+
+  } catch (err) {
+    console.error('❌ Prompt generation error:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to generate prompts' });
   }
 });
 
