@@ -613,10 +613,8 @@ function navigateTo(tab) {
     if (main) main.hidden = false;
     if (footer) footer.hidden = false;
     if (historyPage) historyPage.hidden = true;
-    // Reset to upload view if not showing results
-    if (resultsSection.hidden && progressCard.hidden && errorCard.hidden) {
-      uploadCard.hidden = false;
-    }
+    // Always reset to upload view — clear any previous results/errors
+    resetUI();
   }
   
   if (tab === 'history') {
