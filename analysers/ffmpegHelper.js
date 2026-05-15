@@ -65,33 +65,41 @@ function extractThumbnail(videoPath) {
 }
 
 // ─── Extract Key Frames ───────────────────────────────────────────────────────
-// Extract 6 frames: 0s, 1s, 3s, 25%, 50%, 90% of duration
+// First 5 seconds: 1 frame per second. After that: 1 frame every 2 seconds.
 async function extractFrames(videoPath, duration, outputDir) {
-  const timestamps = [
-    0,                              // very first frame
-    1,                              // 1 second in (hook)
-    Math.min(3, duration * 0.1),   // 3 seconds (hook end)
-    duration * 0.25,                // 25% through
-    duration * 0.5,                 // midpoint
-    duration * 0.9,                 // near end
-  ].map(t => Math.min(t, duration - 0.1));
+  const timestamps = [];
 
-  const framePaths = timestamps.map((_, i) => path.join(outputDir, `frame_${i}.jpg`));
+  // First 5 seconds — every 1 second
+  for (let t = 0; t < Math.min(5, duration); t += 1) {
+    timestamps.push(t);
+  }
 
-  for (let i = 0; i < timestamps.length; i++) {
-    const ts = timestamps[i];
+  // After 5 seconds — every 2 seconds
+  for (let t = 6; t < duration - 0.5; t += 2) {
+    timestamps.push(t);
+  }
+
+  // Clamp all to valid range
+  const validTimestamps = timestamps
+    .map(t => Math.min(t, duration - 0.1))
+    .filter(t => t >= 0);
+
+  const framePaths = validTimestamps.map((_, i) => path.join(outputDir, `frame_${i}.jpg`));
+
+  for (let i = 0; i < validTimestamps.length; i++) {
+    const ts = validTimestamps[i];
     await new Promise((resolve) => {
       ffmpeg(videoPath)
         .screenshots({
           timestamps: [ts],
           filename: `frame_${i}.jpg`,
           folder: outputDir,
-          size: '720x?', // maintain aspect ratio, max 720px wide
+          size: '720x?',
         })
         .on('end', () => resolve())
         .on('error', (err) => {
           console.warn(`Frame ${i} extraction failed:`, err.message);
-          resolve(); // Don't fail the whole analysis for one frame
+          resolve();
         });
     });
   }
