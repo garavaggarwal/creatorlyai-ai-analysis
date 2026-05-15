@@ -453,11 +453,13 @@ Prioritize: hook strength, pacing, visual quality, and clear message.`,
 }
 
 // ─── Model fallback chain ─────────────────────────────────────────────────────
+// Use current valid model names — old 1.5 models are deprecated
 const MODEL_FALLBACKS = [
-  process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-pro',
 ].filter((v, i, a) => a.indexOf(v) === i);
 
 async function callWithRetry(modelName, parts, retries = 2) {
