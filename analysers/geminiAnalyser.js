@@ -1,7 +1,94 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
+const path = require('path');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// ─── Debug instrumentation ────────────────────────────────────────────────────
+const DEBUG = process.env.DEBUG_ANALYSIS === 'true';
+const DEBUG_LOG_DIR = path.join(__dirname, '..', 'debug-logs');
+
+function debugLog(label, data) {
+  if (!DEBUG) return;
+  console.log(`\n[DEBUG] ${label}:`, JSON.stringify(data, null, 2));
+}
+
+function saveDebugTrace(trace) {
+  if (!DEBUG) return;
+  try {
+    if (!fs.existsSync(DEBUG_LOG_DIR)) fs.mkdirSync(DEBUG_LOG_DIR, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19).replace('T', '_');
+    const filename = path.join(DEBUG_LOG_DIR, `analysis_${ts}.json`);
+    fs.writeFileSync(filename, JSON.stringify(trace, null, 2));
+    console.log(`[DEBUG] Full trace saved → ${filename}`);
+  } catch (e) {
+    console.warn('[DEBUG] Could not save trace file:', e.message);
+  }
+}
+
+// Build metric interpretation based on reel type
+function interpretMetrics(computed, reelType) {
+  const { sceneCuts, cutsPerMinute, silencePercent, silenceGaps, loudnessLUFS, avgBrightness, brightnessLabel } = computed.computed;
+  const duration = computed.videoInfo?.duration;
+
+  const isSlow = ['singing', 'music_performance', 'cinematic', 'storytelling'].includes(reelType);
+  const isFast = ['meme', 'comedy', 'dance', 'fitness'].includes(reelType);
+
+  return {
+    sceneCuts: {
+      value: sceneCuts,
+      interpretation: isSlow
+        ? (sceneCuts <= 3 ? 'acceptable for this format' : 'more cuts than typical for this style')
+        : isFast
+          ? (sceneCuts >= 5 ? 'good pacing for this format' : 'may feel slow for this format')
+          : 'within normal range',
+    },
+    cutsPerMinute: {
+      value: cutsPerMinute,
+      interpretation: cutsPerMinute < 3 ? 'slow pacing' : cutsPerMinute < 8 ? 'moderate pacing' : 'fast pacing',
+    },
+    silence: {
+      value: silencePct => silencePct,
+      interpretation: silenceGaps > 2 ? 'multiple silence gaps detected — may hurt engagement' : 'minimal silence',
+    },
+    audio: {
+      value: loudnessLUFS ?? 'unavailable',
+      interpretation: loudnessLUFS === null || loudnessLUFS === undefined
+        ? 'unavailable — cannot assess audio loudness'
+        : loudnessLUFS < -20 ? 'audio is quiet' : loudnessLUFS < -12 ? 'audio level is good' : 'audio may be loud',
+    },
+    brightness: {
+      value: avgBrightness ?? 'unavailable',
+      interpretation: avgBrightness === null || avgBrightness === undefined
+        ? 'unavailable — cannot assess lighting'
+        : brightnessLabel,
+    },
+    duration: {
+      value: duration,
+      interpretation: duration < 10 ? 'very short' : duration < 30 ? 'standard reel length' : duration < 60 ? 'longer reel' : 'very long',
+    },
+  };
+}
+
+// Build scoring rubric weights per reel type
+function getScoringRubric(reelType) {
+  const rubrics = {
+    singing:           { hook: 20, emotion: 25, audio: 25, visual_connection: 15, shareability: 15, reason: 'music/vocal performance — emotion and audio are primary' },
+    music_performance: { hook: 20, emotion: 25, audio: 25, visual_connection: 15, shareability: 15, reason: 'music performance — emotion and audio are primary' },
+    meme:              { hook: 30, timing: 25, pacing: 20, relatability: 15, shareability: 10, reason: 'meme format — hook and timing are critical' },
+    comedy:            { hook: 25, timing: 25, pacing: 20, relatability: 20, shareability: 10, reason: 'comedy — timing and relatability drive shares' },
+    talking_head:      { hook: 30, clarity: 25, text_support: 20, cta: 15, pacing: 10, reason: 'talking head — hook and clarity are most important' },
+    educational:       { hook: 25, clarity: 25, value_density: 20, cta: 15, text_support: 15, reason: 'educational — clarity and value density drive saves' },
+    transformation:    { before_after: 30, reveal_payoff: 25, pacing: 20, emotional_impact: 15, storytelling: 10, reason: 'transformation — clear before/after and payoff are critical' },
+    cinematic:         { visual_mood: 30, atmosphere: 25, composition: 20, emotional_pull: 15, music_sync: 10, reason: 'cinematic — visual quality and mood are primary' },
+    product_ad:        { cta: 30, hook: 25, product_visibility: 20, offer_clarity: 15, conversion: 10, reason: 'product ad — CTA and conversion are primary' },
+    fitness:           { transformation: 25, motivation: 25, process: 20, intensity: 15, payoff: 15, reason: 'fitness — transformation and motivation drive engagement' },
+    food:              { visual_appeal: 30, reveal: 25, pacing: 20, close_up_quality: 15, payoff: 10, reason: 'food — visual appetite appeal is primary' },
+    dance:             { energy: 25, music_sync: 25, visual_variety: 20, hook: 20, creativity: 10, reason: 'dance — energy and sync are primary' },
+    general:           { hook: 25, retention: 20, visual: 20, audio: 15, structure: 20, reason: 'general balanced scoring' },
+  };
+  return rubrics[reelType] || rubrics.general;
+}
 
 // ─── Convert image to Gemini Part ────────────────────────────────────────────
 function imageToGeminiPart(filePath, mimeType = 'image/jpeg') {
@@ -405,10 +492,22 @@ async function classifyReel(ffmpegData, caption, niche, imageParts) {
   for (const modelName of MODEL_FALLBACKS) {
     try {
       const responseText = await callWithRetry(modelName, parts, 1);
+
+      debugLog('CLASSIFICATION_RAW_RESPONSE', { model: modelName, response: responseText.slice(0, 500) });
+
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const classification = JSON.parse(jsonMatch[0]);
         console.log(`   Reel classified as: ${classification.reel_type} (hook: ${classification.hook_type})`);
+
+        debugLog('CLASSIFICATION_RESULT', {
+          reel_type: classification.reel_type,
+          hook_type: classification.hook_type,
+          creator_intent: classification.creator_intent,
+          content_style: classification.content_style,
+          confidence_note: 'Classification based on visual frames + caption + niche hint',
+        });
+
         return classification;
       }
     } catch (_) {
@@ -417,6 +516,7 @@ async function classifyReel(ffmpegData, caption, niche, imageParts) {
   }
 
   console.warn('   Classification failed — using general scoring');
+  debugLog('CLASSIFICATION_FALLBACK', { reason: 'All models failed or returned invalid JSON', fallback: 'general' });
   return { reel_type: 'general', hook_type: 'none', creator_intent: '', content_style: '' };
 }
 
@@ -432,17 +532,85 @@ async function analyseWithGemini(ffmpegData, caption, hashtags, niche) {
     throw new Error('No video frames could be extracted for analysis');
   }
 
+  // ── Debug trace object (only populated when DEBUG=true) ──
+  const trace = DEBUG ? {
+    timestamp: new Date().toISOString(),
+    input: {
+      niche,
+      caption: caption?.slice(0, 100),
+      hashtags: hashtags?.slice(0, 100),
+      frameCount: imageParts.length,
+      duration: ffmpegData.videoInfo?.duration,
+      sceneCuts: ffmpegData.computed?.sceneCuts,
+      cutsPerMinute: ffmpegData.computed?.cutsPerMinute,
+      loudnessLUFS: ffmpegData.computed?.loudnessLUFS,
+      silenceGaps: ffmpegData.computed?.silenceGaps,
+      isVertical: ffmpegData.computed?.isVertical,
+    },
+  } : null;
+
   // ── Stage 1: Classify reel type ──
   const classification = await classifyReel(ffmpegData, caption, niche, imageParts);
+
+  if (DEBUG && trace) {
+    const rubric = getScoringRubric(classification.reel_type);
+    const metricInterp = interpretMetrics(ffmpegData, classification.reel_type);
+
+    trace.classification = {
+      reel_type: classification.reel_type,
+      hook_type: classification.hook_type,
+      creator_intent: classification.creator_intent,
+      content_style: classification.content_style,
+    };
+
+    trace.rubric = {
+      selected: classification.reel_type,
+      weights: rubric,
+      reason: rubric.reason,
+    };
+
+    trace.metric_interpretation = metricInterp;
+
+    // Hallucination risk warnings
+    const hallucinationRisks = [];
+    if (ffmpegData.computed?.loudnessLUFS === null || ffmpegData.computed?.loudnessLUFS === undefined) {
+      hallucinationRisks.push('audio loudness unavailable — model cannot confirm volume level');
+    }
+    if (ffmpegData.computed?.avgBrightness === null || ffmpegData.computed?.avgBrightness === undefined) {
+      hallucinationRisks.push('brightness unavailable — model cannot confirm lighting quality');
+    }
+    if (imageParts.length < 4) {
+      hallucinationRisks.push(`only ${imageParts.length} frames available — timeline inference may be inaccurate`);
+    }
+    hallucinationRisks.push('timeline issues inferred from sampled frames only — not frame-by-frame analysis');
+    hallucinationRisks.push('scores are model estimates — not ground truth measurements');
+
+    trace.hallucination_risks = hallucinationRisks;
+
+    debugLog('RUBRIC_SELECTED', trace.rubric);
+    debugLog('METRIC_INTERPRETATION', trace.metric_interpretation);
+    debugLog('HALLUCINATION_RISKS', hallucinationRisks);
+  }
 
   // ── Stage 2: Category-aware analysis ──
   const analysisPrompt = buildAnalysisPrompt(ffmpegData, caption, hashtags, niche, classification);
   const parts = [analysisPrompt, ...imageParts];
 
+  if (DEBUG && trace) {
+    trace.prompt = analysisPrompt;
+    debugLog('PROMPT_LENGTH', { chars: analysisPrompt.length, frames: imageParts.length });
+  }
+
   let lastError;
   for (const modelName of MODEL_FALLBACKS) {
     try {
       const responseText = await callWithRetry(modelName, parts, 2);
+
+      if (DEBUG && trace) {
+        trace.raw_gemini_response = responseText;
+        debugLog('RAW_GEMINI_RESPONSE_PREVIEW', { model: modelName, preview: responseText.slice(0, 300) });
+      }
+
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Gemini did not return valid JSON');
       const analysis = JSON.parse(jsonMatch[0]);
@@ -450,6 +618,49 @@ async function analyseWithGemini(ffmpegData, caption, hashtags, niche) {
       // Attach classification metadata (non-breaking addition)
       analysis._reel_type = classification.reel_type;
       analysis._hook_type = classification.hook_type;
+
+      if (DEBUG && trace) {
+        // Score explanation trace
+        trace.score_explanations = {};
+        const scoreKeys = ['hook', 'retention', 'visual_quality', 'audio_quality', 'content_structure', 'editing', 'text_subtitles', 'compliance'];
+        for (const key of scoreKeys) {
+          if (analysis[key]) {
+            trace.score_explanations[key] = {
+              score: analysis[key].score,
+              strengths: analysis[key].strengths,
+              improvements: analysis[key].improvements,
+            };
+          }
+        }
+
+        // Timeline issue trace
+        if (analysis.sync_timeline) {
+          trace.timeline_issues = analysis.sync_timeline
+            .filter(t => t.status !== 'ok')
+            .map(t => ({
+              timestamp: t.timestamp,
+              status: t.status,
+              note: t.note,
+              confidence_note: 'inferred from sampled frame at this timestamp',
+            }));
+        }
+
+        trace.final_scores = {
+          predicted_performance: analysis.predicted_performance,
+          sync_score: analysis.sync_score,
+          top_3_fixes: analysis.top_3_fixes,
+          top_3_wins: analysis.top_3_wins,
+        };
+
+        trace.model_used = modelName;
+
+        debugLog('SCORE_EXPLANATIONS', trace.score_explanations);
+        debugLog('TIMELINE_ISSUES', trace.timeline_issues);
+        debugLog('FINAL_SCORES', trace.final_scores);
+
+        // Save full trace to file
+        saveDebugTrace(trace);
+      }
 
       console.log(`Gemini analysis complete (model: ${modelName}, type: ${classification.reel_type})`);
       return analysis;
