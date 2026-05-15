@@ -2,7 +2,7 @@
 
 This file gives full context to any Kiro instance working on this project. Read it before making any changes.
 
-----
+---
 
 ## What This Project Is 
 
