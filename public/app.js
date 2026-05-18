@@ -843,46 +843,129 @@ function animateSteps() {
 
 /* ── Render results ── */
 function renderResults(r) {
-  // Niche + Description in verdict card
+  // 1. Top card — thumbnail, niche, score, sub-scores
+  const thumbImg = document.getElementById('resultThumb');
+  if (r.thumbnail && thumbImg) thumbImg.src = r.thumbnail;
+  
+  const durationEl = document.getElementById('resultDuration');
+  if (durationEl && r.video_info?.duration) durationEl.textContent = formatTime(r.video_info.duration);
+
   const nicheEl = document.getElementById('resultNiche');
   if (nicheEl) nicheEl.textContent = r.niche || r._reel_type?.replace(/_/g, ' ') || 'General';
-  
+
+  const perfPill = document.getElementById('perfBadge');
+  const perfMap = { viral_potential: ['Viral potential', 'viral'], above_average: ['Above average', 'above'], average: ['Average', 'average'], below_average: ['Needs rework', ''] };
+  const [perfLabel, perfCls] = perfMap[r.predicted_performance] || ['Analysed', ''];
+  if (perfPill) { perfPill.textContent = perfLabel; perfPill.className = `perf-pill ${perfCls}`; }
+
   const summaryEl = document.getElementById('overallSummary');
-  if (summaryEl) summaryEl.textContent = r.short_description || r.video_summary || '';
-  
-  const whyEl = document.getElementById('verdictWhy');
-  if (whyEl) whyEl.textContent = r.why_viral || r.why_rework || r.overall_summary || '';
+  if (summaryEl) summaryEl.textContent = r.short_description || r.overall_summary || '';
 
-  // Show thumbnail
-  const thumbWrap = document.getElementById('resultThumbWrap');
-  const thumbImg = document.getElementById('resultThumb');
-  if (r.thumbnail && thumbImg) {
-    thumbImg.src = r.thumbnail;
-    if (thumbWrap) thumbWrap.hidden = false;
-  } else if (thumbWrap) {
-    thumbWrap.hidden = true;
-  }
-
-  // Hashtags
-  const hashtagsCardFull = document.getElementById('hashtagsCardFull');
-  const hashtagsResult = document.getElementById('suggestedHashtagsResult');
-  if (r.suggested_hashtags && r.suggested_hashtags.length > 0 && hashtagsResult) {
-    hashtagsResult.innerHTML = r.suggested_hashtags.map(t => {
-      const tag = t.startsWith('#') ? t : '#' + t;
-      return `<span class="hashtag-tag-result" onclick="copyText(this, '${tag}')">${tag}</span>`;
+  // Sub-scores row
+  const subRow = document.getElementById('subScoresRow');
+  if (subRow) {
+    const subs = [
+      { name: 'Hook', score: r.hook?.score },
+      { name: 'Visuals', score: r.visual_quality?.score },
+      { name: 'Editing', score: r.editing?.score },
+      { name: 'Audio', score: r.audio_quality?.score },
+      { name: 'Content', score: r.content_structure?.score },
+      { name: 'Caption', score: r.text_subtitles?.score },
+    ];
+    subRow.innerHTML = subs.filter(s => s.score != null).map(s => {
+      const cls = s.score >= 7 ? 'high' : s.score >= 5 ? 'mid' : 'low';
+      return `<div class="sub-score-col"><div class="sub-score-num ${cls}">${s.score}</div><div class="sub-score-bar ${cls}"></div><div class="sub-score-name">${s.name}</div></div>`;
     }).join('');
-    if (hashtagsCardFull) hashtagsCardFull.hidden = false;
   }
 
-  // Score ring — animated fill + count-up number
+  // Score ring
   const score = r.overall_score;
   const scoreEl = document.getElementById('overallScore');
   const ringFill = document.getElementById('ringFill');
-  const circumference = 314; // 2 * π * r(50)
-
+  const circumference = 314;
   const color = score >= 7.5 ? '#22c55e' : score >= 5 ? '#a855f7' : score >= 3 ? '#eab308' : '#ef4444';
-  ringFill.style.stroke = color;
-  scoreEl.style.color = color;
+  if (ringFill) { ringFill.style.stroke = color; ringFill.style.strokeDashoffset = circumference - (score / 10) * circumference; }
+  if (scoreEl) { scoreEl.textContent = score?.toFixed ? score.toFixed(0) : '—'; scoreEl.style.color = color; }
+
+  // 2. Verdict text
+  const verdictText = document.getElementById('verdictText');
+  if (verdictText) verdictText.textContent = r.why_viral || r.why_rework || r.video_summary || r.overall_summary || '';
+  
+  const verdictTags = document.getElementById('verdictTags');
+  if (verdictTags) {
+    const tags = [];
+    if (r.predicted_performance === 'viral_potential') tags.push({ text: '✨ Viral potential if hook fixed', cls: 'green' });
+    if (r.hook?.score < 5) tags.push({ text: '⚠ Hook too slow', cls: 'orange' });
+    if (r.audio_quality?.score < 5) tags.push({ text: '🎵 Audio off-beat', cls: 'red' });
+    if (r.retention?.score < 5) tags.push({ text: '📉 Retention risk', cls: 'orange' });
+    if (r.editing?.score >= 7) tags.push({ text: '✂ Editing is strong', cls: 'green' });
+    verdictTags.innerHTML = tags.slice(0, 3).map(t => `<span class="verdict-tag ${t.cls}">${t.text}</span>`).join('');
+  }
+
+  // 3. Fixes
+  const fixesList = document.getElementById('fixesList');
+  const fixes = r.top_3_fixes || [];
+  if (fixesList) {
+    fixesList.innerHTML = fixes.map((fix, i) => {
+      const impact = i < 2 ? 'high' : i < 4 ? 'medium' : 'low';
+      const impactLabel = i < 2 ? 'High impact' : i < 4 ? 'Medium impact' : 'Low impact';
+      // Split fix into title and description at first period or dash
+      const parts = fix.split(/\.\s*Fix:\s*|—\s*/);
+      const title = parts[0] || fix;
+      const desc = parts[1] || '';
+      return `<div class="fix-item-v2"><div class="fix-num ${impact}">${i + 1}</div><div class="fix-content"><div class="fix-title">${title}<span class="fix-impact ${impact}">${impactLabel}</span></div>${desc ? `<div class="fix-desc">${desc}</div>` : ''}</div></div>`;
+    }).join('');
+  }
+
+  // 4. Wins
+  const winsList = document.getElementById('winsList');
+  const wins = r.top_3_wins || r.top_2_wins || [];
+  if (winsList) {
+    winsList.innerHTML = wins.slice(0, 3).map(win => {
+      const parts = win.split(/\.\s|—\s*/);
+      const title = parts[0] || win;
+      const desc = parts.slice(1).join('. ') || '';
+      return `<div class="win-item-v2"><div class="win-icon">✅</div><div class="win-content"><div class="win-title">${title}</div>${desc ? `<div class="win-desc">${desc}</div>` : ''}</div></div>`;
+    }).join('');
+  }
+
+  // 5. Timeline — always show
+  const timelineCard = document.getElementById('timelineCard');
+  const td = r.timeline_data;
+  if (td && td.duration > 0) {
+    timelineCard.hidden = false;
+    renderSyncTimeline(td, r.sync_timeline, r.sync_score);
+  } else if (r.sync_timeline && r.sync_timeline.length > 0 && r.video_info?.duration > 0) {
+    timelineCard.hidden = false;
+    renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
+  }
+
+  // 6. Captions
+  const suggestionsCard = document.getElementById('suggestionsCard');
+  const captionsEl = document.getElementById('suggestedCaptions');
+  if (r.suggested_captions && r.suggested_captions.length > 0 && captionsEl) {
+    captionsEl.innerHTML = r.suggested_captions.map((c, i) =>
+      `<div class="caption-item-v2"><span class="caption-num-v2">${i + 1}</span><span>${c}</span></div>`
+    ).join('');
+    if (suggestionsCard) suggestionsCard.hidden = false;
+  }
+
+  // 7. Hashtags
+  const hashtagsCard = document.getElementById('hashtagsCardFull');
+  const hashtagsEl = document.getElementById('suggestedHashtagsResult');
+  if (r.suggested_hashtags && r.suggested_hashtags.length > 0 && hashtagsEl) {
+    hashtagsEl.innerHTML = r.suggested_hashtags.map(t => {
+      const tag = t.startsWith('#') ? t : '#' + t;
+      return `<span class="hashtag-pill" onclick="copyText(this, '${tag}')">${tag}</span>`;
+    }).join('');
+    if (hashtagsCard) hashtagsCard.hidden = false;
+  }
+}
+
+/* ── Helper renderers ── */
+
+/* ── Select a breakdown chip and show its detail ── */
+function selectBreakdownChip(key) {
 
   if (score !== null) {
     // Start ring at full offset (empty) then animate to target
@@ -1294,70 +1377,47 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
     syncBadge.textContent = `${syncScore}/10`;
   }
 
-  // Colored segments on timeline bar
-  const statusColors = { ok: '#22c55e', audio_issue: '#eab308', text_issue: '#6366f1', visual_issue: '#ef4444' };
+  // Colored segments on timeline bar (reference design: labeled segments)
   if (syncPoints && syncPoints.length > 0) {
     const sorted = [...syncPoints].sort((a, b) => a.timestamp - b.timestamp);
     sorted.forEach((pt, i) => {
       const nextTs = sorted[i + 1]?.timestamp ?? duration;
-      const left = (pt.timestamp / duration) * 100;
       const width = ((nextTs - pt.timestamp) / duration) * 100;
-      const color = statusColors[pt.status] || statusColors.ok;
+      const colorClass = pt.status === 'ok' ? 'green' : (pt.status === 'audio_issue' || pt.status === 'slow') ? 'amber' : 'red';
       const seg = document.createElement('div');
-      seg.style.cssText = `position:absolute;top:0;height:100%;left:${left}%;width:${width}%;background:${color};opacity:${pt.status === 'ok' ? 0.25 : 0.6};border-radius:4px;`;
+      seg.className = `tl-segment-v3 ${colorClass}`;
+      seg.style.width = width + '%';
+      seg.textContent = pt.note || '';
       bar.appendChild(seg);
     });
+  } else {
+    const seg = document.createElement('div');
+    seg.className = 'tl-segment-v3 green';
+    seg.style.width = '100%';
+    seg.textContent = 'Good';
+    bar.appendChild(seg);
   }
 
-  // Issue markers (colored dots on timeline)
+  // Issue list (colored rows)
   const issues = (syncPoints || []).filter(p => p.status !== 'ok');
-  const markerIcons = { audio_issue: '🔊', text_issue: '📝', visual_issue: '🎥', slow: '🐌', ending: '🎬' };
 
   issues.forEach((pt, i) => {
-    const left = (pt.timestamp / duration) * 100;
-    const m = document.createElement('div');
-    m.className = `tl2-marker ${pt.status}`;
-    m.style.left = left + '%';
-    m.textContent = markerIcons[pt.status] || '⚠️';
-    m.onclick = () => {
-      if (videoPlayer && currentVideoUrl) {
-        videoPlayer.currentTime = pt.timestamp;
-        videoPlayer.pause();
-      }
-      // Expand the corresponding issue card
-      const cards = issuesList.querySelectorAll('.tl2-issue-card');
-      cards.forEach((c, ci) => c.classList.toggle('expanded', ci === i));
-    };
-    markers.appendChild(m);
+    // No separate markers needed — segments are the markers
   });
 
   // Timestamps
   const stamps = [0, duration * 0.25, duration * 0.5, duration * 0.75, duration];
-  tStamps.innerHTML = stamps.map(t => `<span>${Math.round(t)}s</span>`).join('');
+  tStamps.innerHTML = stamps.map(t => `<span>${formatTime(t)}</span>`).join('');
 
-  // Issue cards
+  // Issue rows (colored like reference)
   if (issues.length === 0) {
-    issuesList.innerHTML = '<div class="tl2-all-good">✅ Your reel looks great — no issues found!</div>';
+    issuesList.innerHTML = '<div class="tl-issue-row green"><span class="tl-issue-dot" style="background:#15803d"></span> No issues found — your reel looks great!</div>';
   } else {
-    issuesList.innerHTML = issues.map((pt, i) => {
-      const icon = markerIcons[pt.status] || '⚠️';
-      const time = parseFloat(pt.timestamp).toFixed(1);
+    issuesList.innerHTML = issues.map(pt => {
+      const time = formatTime(pt.timestamp);
+      const colorClass = (pt.status === 'audio_issue' || pt.status === 'slow' || pt.status === 'ending') ? 'amber' : (pt.status === 'ok' ? 'green' : 'red');
       const note = pt.note || 'Issue detected';
-      return `
-        <div class="tl2-issue-card" onclick="toggleIssueCard(this, ${pt.timestamp})">
-          <div class="tl2-issue-top">
-            <span class="tl2-issue-time">${time}s</span>
-            <span class="tl2-issue-dot ${pt.status}"></span>
-            <span class="tl2-issue-title">${note}</span>
-            <span class="tl2-issue-expand">▼</span>
-          </div>
-          <div class="tl2-issue-detail">
-            <div class="tl2-issue-actions">
-              <button class="tl2-action-btn primary" onclick="event.stopPropagation(); jumpToTime(${pt.timestamp})">Jump to moment</button>
-            </div>
-          </div>
-        </div>
-      `;
+      return `<div class="tl-issue-row ${colorClass}"><span class="tl-issue-dot" style="background:${colorClass === 'red' ? '#dc2626' : colorClass === 'amber' ? '#b45309' : '#15803d'}"></span> ${time} — ${note}</div>`;
     }).join('');
   }
 }
