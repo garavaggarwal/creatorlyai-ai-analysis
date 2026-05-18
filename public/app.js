@@ -940,21 +940,21 @@ function renderResults(r) {
     renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
   }
 
-  // 6. Captions
+  // 6. Captions (copyable)
   const suggestionsCard = document.getElementById('suggestionsCard');
   const captionsEl = document.getElementById('suggestedCaptions');
   if (r.suggested_captions && r.suggested_captions.length > 0 && captionsEl) {
-    captionsEl.innerHTML = r.suggested_captions.map((c, i) =>
-      `<div class="caption-item-v2"><span class="caption-num-v2">${i + 1}</span><span>${c}</span></div>`
+    captionsEl.innerHTML = r.suggested_captions.slice(0, 5).map((c, i) =>
+      `<div class="caption-item-v2"><span class="caption-num-v2">${i + 1}</span><span class="caption-text-v2">${c}</span><button class="copy-btn-sm" onclick="copyText(this, '${c.replace(/'/g, "\\'")}')">Copy</button></div>`
     ).join('');
     if (suggestionsCard) suggestionsCard.hidden = false;
   }
 
-  // 7. Hashtags
+  // 7. Hashtags (copyable pills)
   const hashtagsCard = document.getElementById('hashtagsCardFull');
   const hashtagsEl = document.getElementById('suggestedHashtagsResult');
   if (r.suggested_hashtags && r.suggested_hashtags.length > 0 && hashtagsEl) {
-    hashtagsEl.innerHTML = r.suggested_hashtags.map(t => {
+    hashtagsEl.innerHTML = r.suggested_hashtags.slice(0, 10).map(t => {
       const tag = t.startsWith('#') ? t : '#' + t;
       return `<span class="hashtag-pill" onclick="copyText(this, '${tag}')">${tag}</span>`;
     }).join('');
@@ -1243,96 +1243,48 @@ function renderHashtagAnalysis(data) {
 function renderSyncTimeline(td, syncPoints, syncScore) {
   const duration = td.duration;
   const bar = document.getElementById('timelineBar');
-  const markers = document.getElementById('timelineMarkers');
   const tStamps = document.getElementById('timelineTimestamps');
   const issuesList = document.getElementById('timelineIssues');
   const syncBadge = document.getElementById('syncScoreBadge');
   const playhead = document.getElementById('timelinePlayhead');
 
+  if (!bar) return;
   bar.innerHTML = '';
   bar.appendChild(playhead);
-  markers.innerHTML = '';
-  tStamps.innerHTML = '';
-  issuesList.innerHTML = '';
+  if (tStamps) tStamps.innerHTML = '';
+  if (issuesList) issuesList.innerHTML = '';
 
-  // ── Premium Video Player Setup ──
+  // ── Video Player Setup (simple) ──
   const videoPlayerWrap = document.getElementById('videoPlayerWrap');
   const videoPlayer = document.getElementById('videoPlayer');
-  const videoPlayBtn = document.getElementById('videoPlayBtn');
   const bigPlayBtn = document.getElementById('bigPlayBtn');
-  const playerOverlay = document.getElementById('playerOverlay');
-  const playIcon = document.getElementById('playIcon');
-  const pauseIcon = document.getElementById('pauseIcon');
   const videoTimeEl = document.getElementById('videoTime');
-  const videoDurationEl = document.getElementById('videoDuration');
-  const scrubberFill = document.getElementById('scrubberFill');
-  const scrubberThumb = document.getElementById('scrubberThumb');
-  const playerScrubber = document.getElementById('playerScrubber');
-  const muteBtn = document.getElementById('muteBtn');
-  const replayBtn = document.getElementById('replayBtn');
 
   if (currentVideoUrl && videoPlayer && videoPlayerWrap) {
     videoPlayer.src = currentVideoUrl;
     videoPlayerWrap.hidden = false;
 
-    const togglePlay = () => {
-      if (videoPlayer.paused) { videoPlayer.play(); }
-      else { videoPlayer.pause(); }
+    if (bigPlayBtn) {
+      bigPlayBtn.onclick = () => {
+        if (videoPlayer.paused) { videoPlayer.play(); bigPlayBtn.style.opacity = '0'; }
+        else { videoPlayer.pause(); bigPlayBtn.style.opacity = '1'; }
+      };
+    }
+    videoPlayer.onclick = () => {
+      if (videoPlayer.paused) { videoPlayer.play(); if (bigPlayBtn) bigPlayBtn.style.opacity = '0'; }
+      else { videoPlayer.pause(); if (bigPlayBtn) bigPlayBtn.style.opacity = '1'; }
     };
+    videoPlayer.onended = () => { if (bigPlayBtn) bigPlayBtn.style.opacity = '1'; };
 
-    videoPlayBtn.onclick = togglePlay;
-    if (bigPlayBtn) bigPlayBtn.onclick = togglePlay;
-    if (playerOverlay) playerOverlay.onclick = togglePlay;
-
-    videoPlayer.onplay = () => {
-      playIcon.hidden = true; pauseIcon.hidden = false;
-      if (playerOverlay) playerOverlay.classList.add('hidden');
-    };
-    videoPlayer.onpause = () => {
-      playIcon.hidden = false; pauseIcon.hidden = true;
-      if (playerOverlay) playerOverlay.classList.remove('hidden');
-    };
-    videoPlayer.onended = () => {
-      if (playerOverlay) playerOverlay.classList.remove('hidden');
-    };
-
-    // Time update — sync scrubber + playhead + time display
     videoPlayer.ontimeupdate = () => {
       if (videoPlayer.duration > 0) {
         const pct = (videoPlayer.currentTime / videoPlayer.duration) * 100;
         playhead.style.left = pct + '%';
-        if (scrubberFill) scrubberFill.style.width = pct + '%';
-        if (scrubberThumb) scrubberThumb.style.left = pct + '%';
         if (videoTimeEl) videoTimeEl.textContent = formatTime(videoPlayer.currentTime);
       }
     };
-    videoPlayer.onloadedmetadata = () => {
-      if (videoDurationEl) videoDurationEl.textContent = formatTime(videoPlayer.duration);
-    };
 
-    // Scrubber drag
-    if (playerScrubber) {
-      const seekFromEvent = (e) => {
-        const rect = playerScrubber.getBoundingClientRect();
-        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        videoPlayer.currentTime = pct * videoPlayer.duration;
-      };
-      playerScrubber.onmousedown = (e) => {
-        seekFromEvent(e);
-        const onMove = (ev) => seekFromEvent(ev);
-        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      };
-      playerScrubber.ontouchstart = (e) => {
-        const touch = e.touches[0];
-        const rect = playerScrubber.getBoundingClientRect();
-        const pct = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-        videoPlayer.currentTime = pct * videoPlayer.duration;
-      };
-    }
-
-    // Timeline bar click + drag to seek (draggable cursor)
+    // Timeline bar drag to seek
     const seekFromBar = (clientX) => {
       const rect = bar.getBoundingClientRect();
       const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -1345,39 +1297,20 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     };
-    bar.ontouchstart = (e) => {
-      seekFromBar(e.touches[0].clientX);
-    };
-    bar.ontouchmove = (e) => {
-      e.preventDefault();
-      seekFromBar(e.touches[0].clientX);
-    };
-
-    // Mute
-    if (muteBtn) {
-      muteBtn.onclick = () => {
-        videoPlayer.muted = !videoPlayer.muted;
-        muteBtn.style.opacity = videoPlayer.muted ? '0.4' : '1';
-      };
-    }
-
-    // Replay
-    if (replayBtn) {
-      replayBtn.onclick = () => { videoPlayer.currentTime = 0; videoPlayer.play(); };
-    }
+    bar.ontouchstart = (e) => { seekFromBar(e.touches[0].clientX); };
+    bar.ontouchmove = (e) => { e.preventDefault(); seekFromBar(e.touches[0].clientX); };
   } else {
     if (videoPlayerWrap) videoPlayerWrap.hidden = true;
-    playhead.style.left = '0%';
   }
 
   // Sync score badge
-  if (syncScore != null) {
+  if (syncScore != null && syncBadge) {
     const bc = syncScore >= 7 ? 'sync-good' : syncScore >= 5 ? 'sync-mid' : 'sync-bad';
     syncBadge.className = `sync-score-badge ${bc}`;
     syncBadge.textContent = `${syncScore}/10`;
   }
 
-  // Colored segments on timeline bar (reference design: labeled segments)
+  // Colored segments on timeline bar
   if (syncPoints && syncPoints.length > 0) {
     const sorted = [...syncPoints].sort((a, b) => a.timestamp - b.timestamp);
     sorted.forEach((pt, i) => {
@@ -1398,27 +1331,25 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
     bar.appendChild(seg);
   }
 
-  // Issue list (colored rows)
-  const issues = (syncPoints || []).filter(p => p.status !== 'ok');
-
-  issues.forEach((pt, i) => {
-    // No separate markers needed — segments are the markers
-  });
-
   // Timestamps
-  const stamps = [0, duration * 0.25, duration * 0.5, duration * 0.75, duration];
-  tStamps.innerHTML = stamps.map(t => `<span>${formatTime(t)}</span>`).join('');
+  if (tStamps) {
+    const stamps = [0, duration * 0.25, duration * 0.5, duration * 0.75, duration];
+    tStamps.innerHTML = stamps.map(t => `<span>${formatTime(t)}</span>`).join('');
+  }
 
-  // Issue rows (colored like reference)
-  if (issues.length === 0) {
-    issuesList.innerHTML = '<div class="tl-issue-row green"><span class="tl-issue-dot" style="background:#15803d"></span> No issues found — your reel looks great!</div>';
-  } else {
-    issuesList.innerHTML = issues.map(pt => {
-      const time = formatTime(pt.timestamp);
-      const colorClass = (pt.status === 'audio_issue' || pt.status === 'slow' || pt.status === 'ending') ? 'amber' : (pt.status === 'ok' ? 'green' : 'red');
-      const note = pt.note || 'Issue detected';
-      return `<div class="tl-issue-row ${colorClass}"><span class="tl-issue-dot" style="background:${colorClass === 'red' ? '#dc2626' : colorClass === 'amber' ? '#b45309' : '#15803d'}"></span> ${time} — ${note}</div>`;
-    }).join('');
+  // Issue rows
+  const issues = (syncPoints || []).filter(p => p.status !== 'ok');
+  if (issuesList) {
+    if (issues.length === 0) {
+      issuesList.innerHTML = '<div class="tl-issue-row green"><span class="tl-issue-dot" style="background:#15803d"></span> No issues found — your reel looks great!</div>';
+    } else {
+      issuesList.innerHTML = issues.map(pt => {
+        const time = formatTime(pt.timestamp);
+        const colorClass = (pt.status === 'audio_issue' || pt.status === 'slow' || pt.status === 'ending') ? 'amber' : 'red';
+        const note = pt.note || 'Issue detected';
+        return `<div class="tl-issue-row ${colorClass}"><span class="tl-issue-dot" style="background:${colorClass === 'red' ? '#dc2626' : '#b45309'}"></span> ${time} — ${note}</div>`;
+      }).join('');
+    }
   }
 }
 

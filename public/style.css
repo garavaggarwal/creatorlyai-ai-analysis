@@ -2789,3 +2789,23 @@ body { padding-bottom: 80px; }
   .result-top-grid { grid-template-columns: 80px 1fr; gap: 12px; }
   .sub-scores-row { grid-template-columns: repeat(3, 1fr); gap: 6px; }
 }
+
+
+/* ── Caption copy button ── */
+.caption-text-v2 { flex: 1; }
+.copy-btn-sm {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.copy-btn-sm:hover { border-color: var(--accent2); color: var(--accent2); }
+.copy-btn-sm.copied { border-color: var(--green); color: var(--green); }
