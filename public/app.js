@@ -842,13 +842,15 @@ function animateSteps() {
 
 /* ── Render results ── */
 function renderResults(r) {
-  // Niche + Short Description
-  const descCard = document.getElementById('descCard');
+  // Niche + Description in verdict card
   const nicheEl = document.getElementById('resultNiche');
-  const descEl = document.getElementById('reelShortDesc');
   if (nicheEl) nicheEl.textContent = r.niche || r._reel_type?.replace(/_/g, ' ') || 'General';
-  if (descEl) descEl.textContent = r.short_description || r.video_summary || r.overall_summary || '';
-  if (descCard) descCard.hidden = false;
+  
+  const summaryEl = document.getElementById('overallSummary');
+  if (summaryEl) summaryEl.textContent = r.short_description || r.video_summary || '';
+  
+  const whyEl = document.getElementById('verdictWhy');
+  if (whyEl) whyEl.textContent = r.why_viral || r.why_rework || r.overall_summary || '';
 
   // Show thumbnail
   const thumbWrap = document.getElementById('resultThumbWrap');

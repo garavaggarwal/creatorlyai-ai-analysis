@@ -2574,3 +2574,38 @@ body { padding-bottom: 80px; }
   color: var(--text-muted);
   line-height: 1.5;
 }
+
+
+/* ── Niche Badge Overlay on Thumbnail ── */
+.niche-badge-overlay {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(0,0,0,0.75);
+  color: var(--accent2);
+  border: 1px solid rgba(168,85,247,0.4);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.result-thumb-wrap { position: relative; }
+
+/* ── Verdict Description + Why ── */
+.verdict-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.verdict-why {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  margin-top: 8px;
+  font-style: italic;
+}
