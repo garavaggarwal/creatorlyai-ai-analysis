@@ -785,6 +785,7 @@ function showProgress() {
 function showResults(results) {
   progressCard.hidden = true;
   resultsSection.hidden = false;
+  errorCard.hidden = true;
   if (historyPage) historyPage.hidden = true;
   // Show hero and main (in case we came from history tab)
   const hero = document.querySelector('.hero');
@@ -1037,11 +1038,16 @@ function renderResults(r) {
     `<div class="info-item"><div class="info-label">${label}</div><div class="info-value">${value}</div></div>`
   ).join('');
 
-  // Sync Timeline
+  // Sync Timeline — show if we have timeline_data OR sync_timeline
   const td = r.timeline_data;
+  const timelineCard = document.getElementById('timelineCard');
   if (td && td.duration > 0) {
-    document.getElementById('timelineCard').hidden = false;
+    timelineCard.hidden = false;
     renderSyncTimeline(td, r.sync_timeline, r.sync_score);
+  } else if (r.sync_timeline && r.sync_timeline.length > 0 && r.video_info?.duration > 0) {
+    // Fallback: build timeline_data from video_info
+    timelineCard.hidden = false;
+    renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
   }
 }
 
