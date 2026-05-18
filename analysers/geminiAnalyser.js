@@ -129,14 +129,11 @@ Return ONLY this JSON (no other text):
 // ─── Stage 2: Category-aware analysis prompt ──────────────────────────────────
 function buildAnalysisPrompt(computed, caption, hashtags, niche, classification) {
   const duration = computed.videoInfo?.duration?.toFixed(1);
-  const frameTimestamps = [
-    0,
-    1,
-    Math.min(3, computed.videoInfo?.duration * 0.1),
-    computed.videoInfo?.duration * 0.25,
-    computed.videoInfo?.duration * 0.5,
-    computed.videoInfo?.duration * 0.9,
-  ].map(t => Math.min(t, computed.videoInfo?.duration - 0.1).toFixed(1));
+
+  // Build accurate frame timestamps matching the new extraction logic (1s for first 5s, 2s after)
+  const frameTimestamps = [];
+  for (let t = 0; t < Math.min(5, computed.videoInfo?.duration); t += 1) frameTimestamps.push(t);
+  for (let t = 6; t < computed.videoInfo?.duration - 0.5; t += 2) frameTimestamps.push(t);
 
   const sceneCuts = computed.computed.sceneCuts;
   const cutsPerMin = computed.computed.cutsPerMinute;
@@ -152,81 +149,119 @@ function buildAnalysisPrompt(computed, caption, hashtags, niche, classification)
   const hookType = classification?.hook_type || 'none';
   const creatorIntent = classification?.creator_intent || '';
   const contentStyle = classification?.content_style || '';
-
-  // ── Category-specific scoring guidance ──
   const categoryGuidance = getCategoryGuidance(reelType);
 
-  return `You are a friendly Instagram creator coach — like a best friend who's grown multiple accounts to 100K+. You give SPECIFIC advice in SIMPLE, PLAIN LANGUAGE.
+  return `You are a world-class Instagram creator coach who has helped thousands of creators go viral. You analyse reels with the eye of an editor, the instincts of a viral content strategist, and the empathy of a friend giving advice. You speak like a creator coach, NEVER like a video engineer.
 
-### THIS REEL IS: ${reelType.toUpperCase().replace(/_/g, ' ')}
+### THIS REEL IS CLASSIFIED AS: ${reelType.toUpperCase().replace(/_/g, ' ')}
 - Hook type: ${hookType.replace(/_/g, ' ')}
 - Creator intent: ${creatorIntent}
 - Content style: ${contentStyle}
 
-### TONE RULES (HIGHEST PRIORITY)
+### TONE RULES (MOST IMPORTANT — NEVER VIOLATE)
 - Talk like a creator coach, NOT a video engineer
-- NEVER use: LUFS, pacing degradation, frame cadence, normalization, transformation resolution, retention metrics, audio normalization, visual cadence, static segment
-- If a metric is unavailable or N/A, DO NOT mention it at all — skip it completely
-- NEVER state uncertain things as facts — use "may", "might", "could feel"
-- Issue text: UNDER 10 WORDS
-- Fix text: UNDER 15 WORDS
-- Every improvement must reference a timestamp: "At Xs: [issue]. Fix: [action]."
+- BANNED words: LUFS, pacing degradation, frame cadence, normalization, transformation resolution, retention metrics, audio normalization, visual cadence, static segment, frame variance, scene cadence
+- If a metric is unavailable (N/A), DO NOT mention it — skip entirely
+- Use soft language for uncertain claims: "may", "might", "could feel", "seems"
+- Issue text: UNDER 12 WORDS
+- Fix text: UNDER 18 WORDS
+- Every improvement MUST reference a timestamp: "At Xs: [issue]. Fix: [action]."
+- Use plain English. If a creator wouldn't say it to a friend, don't say it.
+
+### BANNED EXAMPLES vs GOOD EXAMPLES
+BAD: "Audio normalization required" → GOOD: "Audio feels too quiet"
+BAD: "Static segment reduces retention" → GOOD: "This part stays still too long"
+BAD: "Frame cadence degraded" → GOOD: "The pace feels off here"
+BAD: "Completely unrelated visual" → GOOD: "Ending may feel disconnected"
+BAD: "Use faster cuts" → GOOD: "Add a cut at 7s to keep energy up"
 
 ### CATEGORY-SPECIFIC SCORING RULES
 ${categoryGuidance}
 
-### TECHNICAL DATA (internal reference only — never expose these terms)
+### NICHE-AWARE BENCHMARKS (apply these to your scoring)
+- SINGING/MUSIC: Slow pace expected, emotion > cuts, voice quality is king
+- MEME/COMEDY: Fast timing, punchline delivery, surprise factor, relatability
+- TALKING HEAD/EDUCATIONAL: Hook in 0-3s critical, text overlays, pattern interrupts, CTA
+- TRANSFORMATION/BEFORE-AFTER: Clear payoff, dramatic reveal, emotional impact
+- CINEMATIC/AESTHETIC: Slow is fine, mood > cuts, color grading, atmosphere
+- PRODUCT AD: CTA clarity, product visibility, offer strength
+- FITNESS: Transformation arc, motivation, intensity, payoff
+- FOOD: Visual appetite appeal, satisfying reveal, close-ups
+- DANCE: Energy, sync, creative angles
+- BEAUTY/FASHION: Aesthetic, transformation, aspirational feel
+- STORYTELLING: Narrative arc, emotional pull, payoff
+- VLOG: Personality, authenticity, hook
+- LIPSYNC: Sync accuracy, expression, energy
+- REACTION: Genuine reaction, timing, build-up
+- FACELESS TEXT REEL: Text clarity, pacing, hook, value density
+- MOTIVATIONAL: Emotional impact, message clarity, shareability
+
+### TECHNICAL DATA (internal reference only — never expose these terms to creator)
 - Duration: ${duration}s
 - Scene cuts: ${sceneCuts} total (${cutsPerMin} cuts/min, avg shot: ${avgShot}s)
-${loudness !== null && loudness !== undefined ? `- Audio: ${loudness < -20 ? 'quiet' : loudness < -12 ? 'good level' : 'loud'} (internal ref: ${loudness} LUFS)` : '- Audio loudness: not measured — DO NOT comment on volume'}
-- Silence gaps (>2s): ${silenceGaps} detected
-${silencePct > 0 ? `- Silence: ${silencePct}% of video` : ''}
+${loudness !== null && loudness !== undefined ? `- Audio: ${loudness < -20 ? 'quiet' : loudness < -12 ? 'good level' : 'loud'}` : '- Audio loudness: not measured — DO NOT comment on volume at all'}
+- Silence gaps (>2s): ${silenceGaps} detected${silencePct > 0 ? `, ${silencePct}% of video` : ''}
 ${brightness !== null && brightness !== undefined ? `- Brightness: ${brightnessLabel}` : '- Brightness: not measured — DO NOT comment on lighting'}
-- Format: ${isVertical ? 'Vertical (good for Reels)' : 'Not vertical (will be cropped)'}
-- Frame timestamps: ${frameTimestamps.map((t, i) => 'Frame' + (i + 1) + '=' + t + 's').join(', ')}
+- Format: ${isVertical ? 'Vertical (perfect for Reels)' : 'Not vertical (will be cropped on Reels)'}
+- Frame timestamps provided: ${frameTimestamps.map(t => t + 's').join(', ')}
 
 ### CREATOR METADATA
-- Caption: "${caption || '(none provided)'}"
-- Hashtags: "${hashtags || '(none provided)'}"
-- Niche: "${niche || 'general'}"
+- Original caption: "${caption || '(none provided)'}"
+- Original hashtags: "${hashtags || '(none provided)'}"
+- Niche hint: "${niche || 'general'}"
 
 ### WHAT I NEED FROM YOU
 
-**For every "improvements" array:** Plain creator language with timestamp:
-"At Xs: [what's wrong simply]. Fix: [what to do simply]."
-Good: "At 0-3s: No text to stop the scroll. Fix: Add a bold question in the first 2 seconds."
-Good: "At 8s: Nothing changes for 4 seconds. Fix: Add a quick cut or zoom here."
+**1. SCORES** — score every category 0-10, with sub-scores and 1-2 strengths/improvements each.
 
-**For "top_3_fixes":** The 3 biggest things holding this reel back.
-Good: "First 2 seconds have no hook — add a text line to stop the scroll"
-Good: "At 7s nothing moves for 5 seconds — trim or add a zoom"
+**2. TOP 3-5 FIXES** — the most impactful changes ranked by importance. Each MUST:
+- Reference a timestamp or specific moment
+- State the issue in plain words (under 12 words)
+- Give a specific actionable fix (under 18 words)
+Good: "At 0-2s: No hook to stop the scroll. Fix: Add a 3-word question on screen."
+Good: "At 8s: Energy drops here. Fix: Cut to a different angle or add a zoom."
 
-**For "top_3_wins":** What's already great, with evidence.
-Good: "Great first cut at 1.2s — keeps energy high right away"
-Good: "Perfect vertical format — fills the whole screen"
+**3. TOP 2 WINS** — what's already great. Be specific with evidence.
+Good: "First cut at 1.2s creates strong pattern interrupt"
+Good: "Vertical 9:16 format is perfect for Reels"
 
-**For "suggested_captions":** 10 captions that are viral, funny, emotional, or curiosity-driven. Niche-aware. No boring generic captions.
+**4. WHY VIRAL / WHY REWORK** — two short paragraphs:
+- "why_viral": If this could go viral, explain what would make it spread (or "" if it won't)
+- "why_rework": The #1 reason this reel needs work (1-2 sentences)
 
-**For "sync_timeline":** Short, human, actionable observations. Examples:
-- "Strong opening visual"
-- "This part feels slow"
-- "Audio feels quiet here"
-- "Ending may confuse viewers"
-NOT: "Frame 2 static segment" or "retention degradation"
+**5. SHORT DESCRIPTION** — 1 sentence, 12-15 words, describing what the reel is about.
+
+**6. SYNC TIMELINE** — Mark issues at specific timestamps. Use these statuses:
+- "ok" = engaged moment, working well
+- "audio_issue" = audio feels quiet/missing/mismatched
+- "text_issue" = text overlay missing or unclear
+- "visual_issue" = visual doesn't match audio/story, slow, repetitive
+- "slow" = pace drops, viewer may scroll
+- "ending" = ending feels confusing or weak
+- "hook" = hook moment (good or weak)
+Each note must be UNDER 8 WORDS in plain creator language.
+
+**7. CAPTIONS** — 5 better caption ideas (not 10). Mix of: hook-first, question, emotional, bold, CTA. Niche-aware.
+
+**8. HASHTAGS** — 10 viral hashtags for this video type. Niche-specific, mix of trending + relevant + smaller niche tags.
 
 ### RESPONSE FORMAT — Return EXACTLY this JSON and nothing else:
 
 {
+  "niche": "detected niche in 1-2 words (e.g. Fitness, Travel, Comedy, Food, Singing, Storytelling)",
+  "short_description": "1 sentence describing the reel in 12-15 words",
+  "why_viral": "1-2 sentences on why this could go viral (empty string if it won't)",
+  "why_rework": "1-2 sentences on the main reason this reel needs work",
   "hook": {
     "score": 7,
     "sub_scores": { "first_frame_clarity": 8, "motion_in_first_second": 7, "text_overlay_hook": 6, "pattern_interrupt": 7, "curiosity_gap": 6 },
-    "strengths": ["Specific strength with evidence"],
-    "improvements": ["At Xs: [issue under 10 words]. Fix: [action under 15 words]."]
+    "strengths": ["Specific evidence-based strength"],
+    "improvements": ["At Xs: [issue under 12 words]. Fix: [action under 18 words]."]
   },
   "retention": {
     "score": 6,
     "sub_scores": { "pacing": 7, "scene_variety": 6, "dead_air_risk": 8, "payoff_timing": 6, "loopability": 5 },
-    "strengths": ["Evidence-based strength"],
+    "strengths": ["Evidence-based"],
     "improvements": ["At Xs: [issue]. Fix: [action]."]
   },
   "visual_quality": {
@@ -268,36 +303,33 @@ NOT: "Frame 2 static segment" or "retention degradation"
   "video_summary": "2-3 friendly sentences describing what this video is about and who it is for.",
   "overall_summary": "One sentence: what is the #1 thing holding this reel back?",
   "predicted_performance": "below_average | average | above_average | viral_potential",
-  "top_3_wins": [
-    "Specific win with evidence",
-    "Specific win with evidence",
-    "Specific win with evidence"
+  "top_2_wins": [
+    "Specific evidence-based win",
+    "Specific evidence-based win"
   ],
   "top_3_fixes": [
-    "At Xs: [specific issue]. Fix: [measurable action].",
-    "At Xs: [specific issue]. Fix: [measurable action].",
-    "[Issue with context]. Fix: [action]."
+    "At Xs: [issue]. Fix: [action].",
+    "At Xs: [issue]. Fix: [action].",
+    "At Xs: [issue]. Fix: [action]."
+  ],
+  "top_3_wins": [
+    "(legacy field — keep same as top_2_wins)",
+    "(same)",
+    "(same)"
   ],
   "suggested_captions": [
-    "Caption 1 — viral/hook-first",
-    "Caption 2 — curiosity/question",
-    "Caption 3 — emotional",
-    "Caption 4 — funny/relatable",
-    "Caption 5 — bold statement",
-    "Caption 6 — CTA focused",
-    "Caption 7 — storytelling",
-    "Caption 8 — niche insider",
-    "Caption 9 — trending format",
-    "Caption 10 — controversial take"
+    "Caption 1 — hook-first viral style",
+    "Caption 2 — question/curiosity style",
+    "Caption 3 — emotional/relatable",
+    "Caption 4 — bold statement or CTA",
+    "Caption 5 — niche insider language"
   ],
   "suggested_hashtags": [
     "#tag1", "#tag2", "#tag3", "#tag4", "#tag5",
-    "#tag6", "#tag7", "#tag8", "#tag9", "#tag10",
-    "#tag11", "#tag12", "#tag13", "#tag14", "#tag15",
-    "#tag16", "#tag17", "#tag18", "#tag19", "#tag20"
+    "#tag6", "#tag7", "#tag8", "#tag9", "#tag10"
   ],
   "sync_timeline": [
-    { "timestamp": 0.0, "status": "ok", "note": "human observation under 8 words" }
+    { "timestamp": 0.0, "status": "ok | hook | slow | audio_issue | text_issue | visual_issue | ending", "note": "human observation under 8 words" }
   ],
   "sync_score": 8
 }`;
@@ -442,6 +474,47 @@ MOTIVATIONAL — Score these heavily:
 - Message clarity
 - Shareability
 Reward: powerful message, emotional resonance, quotable moments.`,
+
+    lip_sync: `
+LIPSYNC — Score these heavily:
+- Lip sync accuracy with audio
+- Facial expression and energy
+- Visual variety (angles, transitions)
+- Hook in first 2 seconds
+Reward: tight sync, expressive face, creative visuals.`,
+
+    reaction: `
+REACTION — Score these heavily:
+- Genuine reaction and emotion
+- Build-up and reveal timing
+- Face/expression clarity
+- Shareability of moment
+Reward: authentic reaction, perfect timing, surprise factor.`,
+
+    faceless_text: `
+FACELESS TEXT REEL — Score these heavily:
+- Text clarity and readability
+- Pacing of text reveal
+- Hook line in first 2 seconds
+- Visual variety behind text
+- Value density
+Reward: clear hook, good pacing, satisfying ending or CTA.`,
+
+    fashion: `
+FASHION — Score these heavily:
+- Visual aesthetic and styling
+- Outfit reveal/transition
+- Confidence and energy
+- Aspirational quality
+Reward: clean visuals, creative reveals, strong styling.`,
+
+    storytelling: `
+STORYTELLING — Score these heavily:
+- Narrative arc and emotional pull
+- Hook in first 3 seconds
+- Pacing and tension build
+- Payoff and resolution
+Reward: compelling story, emotional moments, satisfying ending.`,
 
     general: `
 GENERAL — Use balanced scoring across all dimensions.
