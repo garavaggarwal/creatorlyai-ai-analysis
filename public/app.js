@@ -842,56 +842,22 @@ function animateSteps() {
 
 /* ── Render results ── */
 function renderResults(r) {
-  // Show thumbnail (always visible in new layout)
+  // Niche + Short Description
+  const descCard = document.getElementById('descCard');
+  const nicheEl = document.getElementById('resultNiche');
+  const descEl = document.getElementById('reelShortDesc');
+  if (nicheEl) nicheEl.textContent = r.niche || r._reel_type?.replace(/_/g, ' ') || 'General';
+  if (descEl) descEl.textContent = r.short_description || r.video_summary || r.overall_summary || '';
+  if (descCard) descCard.hidden = false;
+
+  // Show thumbnail
+  const thumbWrap = document.getElementById('resultThumbWrap');
   const thumbImg = document.getElementById('resultThumb');
   if (r.thumbnail && thumbImg) {
     thumbImg.src = r.thumbnail;
-  }
-
-  // Niche label
-  const nicheEl = document.getElementById('resultNiche');
-  if (nicheEl) nicheEl.textContent = r.niche || r._reel_type?.replace(/_/g, ' ') || 'General';
-
-  // Short description
-  const descEl = document.getElementById('reelShortDesc');
-  if (descEl) descEl.textContent = r.short_description || r.video_summary || '';
-
-  // Why viral / Why rework
-  const whyViralBox = document.getElementById('whyViralBox');
-  const whyViralText = document.getElementById('whyViralText');
-  const whyReworkBox = document.getElementById('whyReworkBox');
-  const whyReworkText = document.getElementById('whyReworkText');
-  if (r.why_viral && r.why_viral.trim() && whyViralBox) {
-    whyViralText.textContent = r.why_viral;
-    whyViralBox.hidden = false;
-  } else if (whyViralBox) {
-    whyViralBox.hidden = true;
-  }
-  if (r.why_rework && r.why_rework.trim() && whyReworkBox) {
-    whyReworkText.textContent = r.why_rework;
-    whyReworkBox.hidden = false;
-  } else if (whyReworkBox) {
-    whyReworkBox.hidden = true;
-  }
-
-  // Sub-score grid (Hook, Visuals, Editing, Audio, Content)
-  const subScoreGrid = document.getElementById('subScoreGrid');
-  if (subScoreGrid) {
-    const subScores = [
-      { label: 'Hook', score: r.hook?.score },
-      { label: 'Visuals', score: r.visual_quality?.score },
-      { label: 'Editing', score: r.editing?.score },
-      { label: 'Audio', score: r.audio_quality?.score },
-      { label: 'Content', score: r.content_structure?.score },
-      { label: 'Retention', score: r.retention?.score },
-    ];
-    subScoreGrid.innerHTML = subScores.filter(s => s.score != null).map(s => {
-      const cls = s.score >= 7 ? 'high' : s.score >= 5 ? 'mid' : 'low';
-      return `<div class="sub-score-item">
-        <div class="sub-score-label">${s.label}</div>
-        <div class="sub-score-value ${cls}">${s.score}</div>
-      </div>`;
-    }).join('');
+    if (thumbWrap) thumbWrap.hidden = false;
+  } else if (thumbWrap) {
+    thumbWrap.hidden = true;
   }
 
   // Hashtags
@@ -902,7 +868,7 @@ function renderResults(r) {
       const tag = t.startsWith('#') ? t : '#' + t;
       return `<span class="hashtag-tag-result" onclick="copyText(this, '${tag}')">${tag}</span>`;
     }).join('');
-    hashtagsCardFull.hidden = false;
+    if (hashtagsCardFull) hashtagsCardFull.hidden = false;
   }
 
   // Score ring — animated fill + count-up number

@@ -2552,3 +2552,25 @@ body { padding-bottom: 80px; }
   .top-result-grid { grid-template-columns: 80px 1fr; }
   .top-result-niche { font-size: 0.6rem; padding: 2px 4px; }
 }
+
+
+/* ── Niche + Description Card ── */
+.desc-card { padding: 16px 20px; }
+.desc-top-row { margin-bottom: 8px; }
+.niche-badge {
+  display: inline-block;
+  background: rgba(168,85,247,0.12);
+  border: 1px solid rgba(168,85,247,0.3);
+  color: var(--accent2);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.reel-desc {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}

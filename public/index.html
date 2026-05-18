@@ -187,58 +187,46 @@
     <!-- ── RESULTS ── -->
     <div id="resultsSection" hidden>
 
-      <!-- 1. TOP CARD — Thumbnail + Score + Niche + Sub-scores -->
-      <div class="card top-result-card">
-        <div class="top-result-grid">
-          <div class="top-result-thumb-wrap">
-            <img class="top-result-thumb" id="resultThumb" alt="Video thumbnail" />
-            <div class="top-result-niche" id="resultNiche">General</div>
-          </div>
-          <div class="top-result-info">
-            <div class="top-result-score-row">
-              <div class="score-ring" id="scoreRing">
-                <svg viewBox="0 0 120 120">
-                  <circle class="ring-bg" cx="60" cy="60" r="50"/>
-                  <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
-                </svg>
-                <div class="score-number" id="overallScore">—</div>
-              </div>
-              <div>
-                <div class="perf-badge" id="perfBadge"></div>
-                <div class="score-verdict" id="scoreVerdict"></div>
-              </div>
-            </div>
-            <div class="sub-score-grid" id="subScoreGrid"></div>
-          </div>
+      <!-- Niche + Short Description -->
+      <div class="card desc-card" id="descCard" hidden>
+        <div class="desc-top-row">
+          <span class="niche-badge" id="resultNiche">General</span>
         </div>
-      </div>
-
-      <!-- 2. SHORT DESCRIPTION + WHY VIRAL / WHY REWORK -->
-      <div class="card desc-card">
         <p class="reel-desc" id="reelShortDesc"></p>
-        <div class="why-grid">
-          <div class="why-item why-viral" id="whyViralBox" hidden>
-            <div class="why-label">🚀 Why this could go viral</div>
-            <p class="why-text" id="whyViralText"></p>
+      </div>
+
+      <!-- Overall Score -->
+      <div class="card verdict-card">
+        <div class="verdict-top">
+          <div class="result-thumb-wrap" id="resultThumbWrap" hidden>
+            <img class="result-thumb" id="resultThumb" alt="Video thumbnail" />
           </div>
-          <div class="why-item why-rework" id="whyReworkBox" hidden>
-            <div class="why-label">🔧 Why it needs rework</div>
-            <p class="why-text" id="whyReworkText"></p>
+          <div class="score-ring" id="scoreRing">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="score-number" id="overallScore">—</div>
+          </div>
+          <div class="verdict-meta">
+            <div class="perf-badge" id="perfBadge"></div>
+            <div class="score-verdict" id="scoreVerdict"></div>
+            <p class="overall-summary" id="overallSummary"></p>
           </div>
         </div>
       </div>
 
-      <!-- 3. TOP 3-5 FIXES — Actionable -->
+      <!-- Top Fixes -->
       <div class="card fixes-card-full">
         <div class="card-title-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">Top Fixes</h3>
+          <h3 class="card-title" style="margin-bottom:0">Fix These to Go Viral</h3>
         </div>
         <ul class="bullet-list fixes-list" id="fixesList"></ul>
       </div>
 
-      <!-- 4. WHAT'S GOOD (TOP 2 WINS) -->
-      <div class="card wins-card" id="winsCard">
+      <!-- What's Working -->
+      <div class="card wins-card">
         <div class="card-title-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           <h3 class="card-title" style="margin-bottom:0">What's Working</h3>
@@ -246,7 +234,7 @@
         <ul class="bullet-list wins-list" id="winsList"></ul>
       </div>
 
-      <!-- 5. VIDEO PLAYER + INTERACTIVE TIMELINE -->
+      <!-- Video Player + Timeline -->
       <div class="card timeline-card-v2" id="timelineCard" hidden>
         <div class="player-wrap" id="videoPlayerWrap" hidden>
           <div class="player-container">
@@ -281,11 +269,11 @@
         <div class="tl2-header">
           <h3 class="tl2-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Timeline & Issues
+            Reel Timeline
           </h3>
           <div class="sync-score-badge" id="syncScoreBadge"></div>
         </div>
-        <p class="tl2-sub">Drag the cursor to see exactly where issues happen</p>
+        <p class="tl2-sub">Drag the cursor to see where issues happen</p>
         <div class="tl2-bar-wrap" id="timelineBarWrap">
           <div class="tl2-bar" id="timelineBar">
             <div class="tl2-playhead" id="timelinePlayhead"></div>
@@ -296,32 +284,32 @@
         <div class="tl2-issues" id="timelineIssues"></div>
       </div>
 
-      <!-- 6. TOP 5 CAPTION IDEAS -->
+      <!-- Score Breakdown -->
+      <div class="card breakdown-card">
+        <div class="card-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h3 class="card-title" style="margin-bottom:0">Score Breakdown</h3>
+        </div>
+        <div class="breakdown-scroll" id="breakdownScroll"></div>
+        <div class="breakdown-detail" id="breakdownDetail" hidden></div>
+      </div>
+
+      <!-- Caption Ideas -->
       <div class="card suggestions-card" id="suggestionsCard" hidden>
         <div class="card-title-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">Better Caption Ideas</h3>
+          <h3 class="card-title" style="margin-bottom:0">Caption Ideas</h3>
         </div>
         <div class="captions-scroll" id="suggestedCaptions"></div>
       </div>
 
-      <!-- 7. TOP 10 HASHTAGS -->
+      <!-- Viral Hashtags -->
       <div class="card hashtags-card-full" id="hashtagsCardFull" hidden>
         <div class="card-title-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
           <h3 class="card-title" style="margin-bottom:0">Viral Hashtags</h3>
         </div>
         <div class="hashtags-cloud-result" id="suggestedHashtagsResult"></div>
-      </div>
-
-      <!-- 8. DEEP METRICS — Score Breakdown (last) -->
-      <div class="card breakdown-card">
-        <div class="card-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <h3 class="card-title" style="margin-bottom:0">Deep Metrics</h3>
-        </div>
-        <div class="breakdown-scroll" id="breakdownScroll"></div>
-        <div class="breakdown-detail" id="breakdownDetail" hidden></div>
       </div>
 
       <!-- Analyse Another -->
