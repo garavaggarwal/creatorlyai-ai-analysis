@@ -239,27 +239,19 @@
       <!-- 5. VIDEO TIMELINE ANALYSIS -->
       <div class="section-label">VIDEO TIMELINE ANALYSIS</div>
       <div class="card timeline-card-v2" id="timelineCard">
-        <div class="tl-layout">
-          <div class="tl-video-side" id="videoPlayerWrap" hidden>
-            <video class="tl-video" id="videoPlayer" playsinline preload="metadata"></video>
-            <button class="tl-play-overlay" id="bigPlayBtn" aria-label="Play">▶</button>
-            <span class="tl-time-badge" id="videoTime">0:00</span>
-          </div>
-          <div class="tl-content-side">
-            <p class="tl-hint">Drag the cursor to scrub through issues. <span class="tl-legend-inline">Red = critical, Amber = improve, Green = good.</span></p>
-            <div class="tl-bar-wrap">
-              <div class="tl-bar" id="timelineBar">
-                <div class="tl-playhead" id="timelinePlayhead"></div>
-              </div>
-              <div class="tl-timestamps" id="timelineTimestamps"></div>
+        <div class="tl-video-full" id="videoPlayerWrap" hidden>
+          <video class="tl-video-player" id="videoPlayer" playsinline preload="metadata"></video>
+          <button class="tl-play-btn" id="bigPlayBtn" aria-label="Play">▶</button>
+          <span class="tl-time-label" id="videoTime">0:00</span>
+        </div>
+        <div class="tl-content" style="padding:16px 20px 20px">
+          <div class="tl-bar-wrap">
+            <div class="tl-bar" id="timelineBar">
+              <div class="tl-playhead" id="timelinePlayhead"></div>
             </div>
-            <div class="tl-legend-row">
-              <span class="tl-legend-item"><span class="tl-dot red"></span> Fix needed</span>
-              <span class="tl-legend-item"><span class="tl-dot amber"></span> Improve</span>
-              <span class="tl-legend-item"><span class="tl-dot green"></span> Good</span>
-            </div>
-            <div class="tl-issues-list" id="timelineIssues"></div>
+            <div class="tl-timestamps" id="timelineTimestamps"></div>
           </div>
+          <div class="tl-issues-list" id="timelineIssues"></div>
         </div>
         <div class="tl-markers" id="timelineMarkers" hidden></div>
       </div>

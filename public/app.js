@@ -845,7 +845,14 @@ function animateSteps() {
 function renderResults(r) {
   // 1. Top card — thumbnail, niche, score, sub-scores
   const thumbImg = document.getElementById('resultThumb');
-  if (r.thumbnail && thumbImg) thumbImg.src = r.thumbnail;
+  if (r.thumbnail && thumbImg) {
+    thumbImg.src = r.thumbnail;
+    // Make thumbnail clickable — scroll to video
+    thumbImg.parentElement.onclick = () => {
+      const tl = document.getElementById('timelineCard');
+      if (tl) tl.scrollIntoView({ behavior: 'smooth' });
+    };
+  }
   
   const durationEl = document.getElementById('resultDuration');
   if (durationEl && r.video_info?.duration) durationEl.textContent = formatTime(r.video_info.duration);
@@ -1310,7 +1317,7 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
     syncBadge.textContent = `${syncScore}/10`;
   }
 
-  // Colored segments on timeline bar
+  // Colored segments on timeline bar — NO text, just colors
   if (syncPoints && syncPoints.length > 0) {
     const sorted = [...syncPoints].sort((a, b) => a.timestamp - b.timestamp);
     sorted.forEach((pt, i) => {
@@ -1320,14 +1327,12 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
       const seg = document.createElement('div');
       seg.className = `tl-segment-v3 ${colorClass}`;
       seg.style.width = width + '%';
-      seg.textContent = pt.note || '';
       bar.appendChild(seg);
     });
   } else {
     const seg = document.createElement('div');
     seg.className = 'tl-segment-v3 green';
     seg.style.width = '100%';
-    seg.textContent = 'Good';
     bar.appendChild(seg);
   }
 
