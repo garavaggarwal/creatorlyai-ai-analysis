@@ -868,22 +868,7 @@ function renderResults(r) {
   const summaryEl = document.getElementById('overallSummary');
   if (summaryEl) summaryEl.textContent = r.short_description || r.overall_summary || '';
 
-  // Sub-scores row
-  const subRow = document.getElementById('subScoresRow');
-  if (subRow) {
-    const subs = [
-      { name: 'Hook', score: r.hook?.score },
-      { name: 'Visuals', score: r.visual_quality?.score },
-      { name: 'Editing', score: r.editing?.score },
-      { name: 'Audio', score: r.audio_quality?.score },
-      { name: 'Content', score: r.content_structure?.score },
-      { name: 'Caption', score: r.text_subtitles?.score },
-    ];
-    subRow.innerHTML = subs.filter(s => s.score != null).map(s => {
-      const cls = s.score >= 7 ? 'high' : s.score >= 5 ? 'mid' : 'low';
-      return `<div class="sub-score-col"><div class="sub-score-num ${cls}">${s.score}</div><div class="sub-score-bar ${cls}"></div><div class="sub-score-name">${s.name}</div></div>`;
-    }).join('');
-  }
+  // Sub-scores removed from top card — shown in Reel Scores section instead
 
   // Score ring
   const score = r.overall_score;
@@ -924,16 +909,13 @@ function renderResults(r) {
     }).join('');
   }
 
-  // 4. Wins
+  // 4. Wins — simple checkmark list
   const winsList = document.getElementById('winsList');
   const wins = r.top_3_wins || r.top_2_wins || [];
   if (winsList) {
-    winsList.innerHTML = wins.slice(0, 3).map(win => {
-      const parts = win.split(/\.\s|—\s*/);
-      const title = parts[0] || win;
-      const desc = parts.slice(1).join('. ') || '';
-      return `<div class="win-item-v2"><div class="win-icon">✅</div><div class="win-content"><div class="win-title">${title}</div>${desc ? `<div class="win-desc">${desc}</div>` : ''}</div></div>`;
-    }).join('');
+    winsList.innerHTML = wins.slice(0, 3).map(win =>
+      `<div class="win-item-v2"><div class="win-icon">✅</div><div class="win-text">${win}</div></div>`
+    ).join('');
   }
 
   // 5. Reel Scores — horizontal scrollable cards with rings

@@ -65,24 +65,39 @@ function extractThumbnail(videoPath) {
 }
 
 // ─── Extract Key Frames ───────────────────────────────────────────────────────
-// First 5 seconds: 1 frame per second. After that: 1 frame every 2 seconds.
-async function extractFrames(videoPath, duration, outputDir) {
-  const timestamps = [];
+// Smart extraction: dense hook (0.5s intervals for first 5s) + scene changes after
+async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
+  const timestamps = new Set();
 
-  // First 5 seconds — every 1 second
-  for (let t = 0; t < Math.min(5, duration); t += 1) {
-    timestamps.push(t);
+  // First 5 seconds — every 0.5 second (dense hook coverage)
+  for (let t = 0; t < Math.min(5, duration); t += 0.5) {
+    timestamps.add(Math.round(t * 10) / 10);
   }
 
-  // After 5 seconds — every 2 seconds
-  for (let t = 6; t < duration - 0.5; t += 2) {
-    timestamps.push(t);
+  // After 5 seconds — every 3 seconds as baseline
+  for (let t = 6; t < duration - 0.5; t += 3) {
+    timestamps.add(Math.round(t * 10) / 10);
   }
 
-  // Clamp all to valid range
-  const validTimestamps = timestamps
+  // Add scene change timestamps (from FFmpeg scene detection)
+  if (sceneTimestamps && sceneTimestamps.length > 0) {
+    sceneTimestamps.forEach(t => timestamps.add(Math.round(t * 10) / 10));
+  }
+
+  // Deduplicate within 0.3s of each other
+  const sorted = [...timestamps].sort((a, b) => a - b);
+  const deduped = [];
+  for (const t of sorted) {
+    if (deduped.length === 0 || t - deduped[deduped.length - 1] >= 0.3) {
+      deduped.push(t);
+    }
+  }
+
+  // Clamp to valid range and limit to 20 max
+  const validTimestamps = deduped
     .map(t => Math.min(t, duration - 0.1))
-    .filter(t => t >= 0);
+    .filter(t => t >= 0)
+    .slice(0, 20);
 
   const framePaths = validTimestamps.map((_, i) => path.join(outputDir, `frame_${i}.jpg`));
 
@@ -219,9 +234,9 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
   const silenceReal = info.hasAudio ? await detectSilence(videoPath, info.duration) : { gaps: [], totalSilenceSecs: 0, silencePercent: 0, deadAirCount: 0 };
   const videoStats = await getVideoStats(videoPath);
 
-  // Extract frames
+  // Extract frames (using scene change timestamps for smarter sampling)
   fs.mkdirSync(framesOutputDir, { recursive: true });
-  const framePaths = await extractFrames(videoPath, info.duration, framesOutputDir);
+  const framePaths = await extractFrames(videoPath, info.duration, framesOutputDir, scenes);
   const validFrames = framePaths.filter(f => {
     if (!f || !fs.existsSync(f)) return false;
     return fs.statSync(f).size > 0;
