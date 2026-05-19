@@ -936,7 +936,44 @@ function renderResults(r) {
     }).join('');
   }
 
-  // 5. Timeline — always show
+  // 5. Reel Scores — horizontal scrollable cards with rings
+  const scoresScroll = document.getElementById('reelScoresScroll');
+  if (scoresScroll) {
+    const scoreCategories = [
+      { key: 'hook', label: 'Hook' },
+      { key: 'visual_quality', label: 'Visuals' },
+      { key: 'editing', label: 'Editing' },
+      { key: 'audio_quality', label: 'Audio' },
+      { key: 'content_structure', label: 'Content' },
+      { key: 'retention', label: 'Retention' },
+      { key: 'text_subtitles', label: 'Text' },
+    ];
+    scoresScroll.innerHTML = scoreCategories.filter(c => r[c.key]?.score != null).map(c => {
+      const s = r[c.key].score;
+      const color = s >= 7 ? '#22c55e' : s >= 5 ? '#eab308' : '#ef4444';
+      const badgeClass = s >= 7 ? 'strong' : s >= 5 ? 'average' : 'weak';
+      const badgeText = s >= 7 ? 'Strong' : s >= 5 ? 'Average' : 'Weak';
+      const desc = (r[c.key].strengths?.[0] || r[c.key].improvements?.[0] || '').slice(0, 60);
+      const circumference = 188; // 2 * π * 30
+      const offset = circumference - (s / 10) * circumference;
+      return `
+        <div class="reel-score-card">
+          <div class="reel-score-ring">
+            <svg viewBox="0 0 72 72">
+              <circle class="ring-bg-sm" cx="36" cy="36" r="30"/>
+              <circle class="ring-fill-sm" cx="36" cy="36" r="30" style="stroke:${color};stroke-dashoffset:${offset}"/>
+            </svg>
+            <div class="reel-score-num" style="color:${color}">${s}</div>
+          </div>
+          <div class="reel-score-label">${c.label}</div>
+          <span class="reel-score-badge ${badgeClass}">${badgeText}</span>
+          <div class="reel-score-desc">${desc}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 6. Timeline — always show
   const timelineCard = document.getElementById('timelineCard');
   const td = r.timeline_data;
   if (td && td.duration > 0) {
