@@ -3093,3 +3093,48 @@ body { padding-bottom: 80px; }
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+
+/* ── Score X/10 format ── */
+.score-denom { font-size: 0.55em; color: var(--text-dim); font-weight: 500; }
+.score-ring-sm { width: 80px; height: 80px; }
+.score-ring-sm .score-number { font-size: 1.3rem; }
+
+/* ── Reel Score Points (2 bullets) ── */
+.reel-score-points { margin-top: 8px; text-align: left; }
+.reel-score-point {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+
+/* ── Reel Score Card — Full text, no truncation ── */
+.reel-score-card {
+  min-width: 180px;
+  max-width: 200px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.reel-score-points {
+  margin-top: 8px;
+  text-align: left;
+}
+.reel-score-point {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  word-break: normal;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Score ring enlarged in top card */
+.score-ring-sm { width: 72px; height: 72px; }
+.score-ring-sm .score-number { font-size: 0.85rem; font-weight: 900; }

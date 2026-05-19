@@ -877,7 +877,11 @@ function renderResults(r) {
   const circumference = 314;
   const color = score >= 7.5 ? '#22c55e' : score >= 5 ? '#a855f7' : score >= 3 ? '#eab308' : '#ef4444';
   if (ringFill) { ringFill.style.stroke = color; ringFill.style.strokeDashoffset = circumference - (score / 10) * circumference; }
-  if (scoreEl) { scoreEl.textContent = score?.toFixed ? score.toFixed(0) : '—'; scoreEl.style.color = color; }
+  if (scoreEl) {
+    const displayScore = score?.toFixed ? score.toFixed(1) : '—';
+    scoreEl.innerHTML = `${displayScore}<span class="score-denom">/10</span>`;
+    scoreEl.style.color = color;
+  }
 
   // 2. Verdict text (in top card, below divider) — no chips
   const verdictText = document.getElementById('verdictText');
@@ -917,10 +921,14 @@ function renderResults(r) {
       const color = s >= 7 ? '#22c55e' : s >= 5 ? '#eab308' : '#ef4444';
       const badgeClass = s >= 7 ? 'strong' : s >= 5 ? 'average' : 'weak';
       const badgeText = s >= 7 ? 'Strong' : s >= 5 ? 'Average' : 'Weak';
-      const rawDesc = r[c.key].strengths?.[0] || r[c.key].improvements?.[0] || '';
-      const desc = rawDesc.length > 45 ? rawDesc.slice(0, rawDesc.lastIndexOf(' ', 45)) : rawDesc;
-      const circumference = 188; // 2 * π * 30
+      // Get up to 2 complete points (strengths or improvements)
+      const points = [
+        ...(r[c.key].strengths || []).slice(0, 1),
+        ...(r[c.key].improvements || []).slice(0, 1),
+      ].slice(0, 2);
+      const circumference = 188;
       const offset = circumference - (s / 10) * circumference;
+      const pointsHtml = points.map(p => `<div class="reel-score-point">• ${p}</div>`).join('');
       return `
         <div class="reel-score-card">
           <div class="reel-score-ring">
@@ -932,7 +940,7 @@ function renderResults(r) {
           </div>
           <div class="reel-score-label">${c.label}</div>
           <span class="reel-score-badge ${badgeClass}">${badgeText}</span>
-          <div class="reel-score-desc">${desc}</div>
+          <div class="reel-score-points">${pointsHtml}</div>
         </div>
       `;
     }).join('');
@@ -997,15 +1005,16 @@ function selectBreakdownChip(key) {
       const currentOffset = circumference - eased * (circumference - targetOffset);
       ringFill.style.strokeDashoffset = currentOffset;
 
-      // Animate counter
+      // Animate counter — show X.X/10 format
       const currentScore = eased * score;
-      scoreEl.textContent = currentScore.toFixed(1);
+      scoreEl.textContent = currentScore.toFixed(1) + '/10';
 
       if (t < 1) {
         requestAnimationFrame(animateRing);
       } else {
         ringFill.style.strokeDashoffset = targetOffset;
-        scoreEl.textContent = score.toFixed(1);
+        scoreEl.textContent = score.toFixed(1) + '/10';
+        scoreEl.style.fontSize = '0.9rem';
       }
     }
 
