@@ -3004,3 +3004,28 @@ body { padding-bottom: 80px; }
   line-height: 1.6;
   margin-bottom: 12px;
 }
+
+
+/* ── Top Card V4 — Wireframe layout ── */
+.result-top-grid-v2 {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+.result-left-col { display: flex; flex-direction: column; gap: 10px; }
+.result-right-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.result-short-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.score-ring-sm { width: 64px; height: 64px; }
+.score-ring-sm .score-number { font-size: 1.3rem; font-weight: 900; }
+.niche-pill { font-size: 0.8rem; padding: 4px 14px; font-weight: 700; }
+.perf-pill { font-size: 0.8rem; padding: 4px 14px; font-weight: 700; }

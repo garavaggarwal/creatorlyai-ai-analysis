@@ -187,49 +187,33 @@
     <!-- ── RESULTS ── -->
     <div id="resultsSection" hidden>
 
-      <!-- 1. SCORE CARD — Thumbnail + Niche + Score -->
+      <!-- 1. SCORE CARD — Wireframe layout -->
       <div class="card result-top-card">
-        <div class="result-top-grid">
-          <div class="result-top-thumb">
-            <img id="resultThumb" alt="" />
-            <span class="result-duration" id="resultDuration">0:00</span>
+        <div class="result-top-grid-v2">
+          <div class="result-left-col">
+            <div class="result-top-thumb">
+              <img id="resultThumb" alt="" />
+              <span class="result-duration" id="resultDuration">0:00</span>
+            </div>
+            <p class="result-short-desc" id="overallSummary"></p>
           </div>
-          <div class="result-top-info">
-            <div class="result-top-badges">
-              <span class="niche-pill" id="resultNiche">General</span>
-              <span class="perf-pill" id="perfBadge">Needs rework</span>
+          <div class="result-right-col">
+            <div class="score-ring-sm" id="scoreRing">
+              <svg viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
+              </svg>
+              <div class="score-number" id="overallScore">—</div>
             </div>
-            <div class="result-overall-row">
-              <div class="score-ring-sm" id="scoreRing">
-                <svg viewBox="0 0 120 120">
-                  <circle class="ring-bg" cx="60" cy="60" r="50"/>
-                  <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
-                </svg>
-                <div class="score-number" id="overallScore">—</div>
-              </div>
-              <div>
-                <div class="result-overall-label">Overall score</div>
-                <div class="result-overall-desc" id="overallSummary"></div>
-              </div>
-            </div>
+            <span class="niche-pill" id="resultNiche">General</span>
+            <span class="perf-pill" id="perfBadge">Average</span>
           </div>
         </div>
+        <div class="result-verdict-divider"></div>
+        <p class="result-verdict-text" id="verdictText"></p>
       </div>
 
-      <!-- 2. VERDICT SUMMARY — 2 lines, good + bad -->
-      <div class="card verdict-text-card">
-        <h3 class="section-title">What's the verdict?</h3>
-        <p class="verdict-paragraph" id="verdictText"></p>
-        <div class="verdict-tags" id="verdictTags"></div>
-      </div>
-
-      <!-- 3. WHAT'S WORKING — Simple list -->
-      <div class="section-label">WHAT'S WORKING</div>
-      <div class="card wins-card-v2">
-        <div id="winsList"></div>
-      </div>
-
-      <!-- 4. TOP FIXES -->
+      <!-- 2. TOP FIXES -->
       <div class="section-label">TOP FIXES</div>
       <div class="card fixes-card-v2">
         <div id="fixesList"></div>
