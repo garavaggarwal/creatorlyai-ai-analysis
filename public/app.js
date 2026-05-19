@@ -879,18 +879,18 @@ function renderResults(r) {
   if (ringFill) { ringFill.style.stroke = color; ringFill.style.strokeDashoffset = circumference - (score / 10) * circumference; }
   if (scoreEl) { scoreEl.textContent = score?.toFixed ? score.toFixed(0) : '—'; scoreEl.style.color = color; }
 
-  // 2. Verdict text
+  // 2. Verdict text (in top card, below divider)
   const verdictText = document.getElementById('verdictText');
   if (verdictText) verdictText.textContent = r.why_viral || r.why_rework || r.video_summary || r.overall_summary || '';
   
   const verdictTags = document.getElementById('verdictTags');
   if (verdictTags) {
     const tags = [];
-    if (r.predicted_performance === 'viral_potential') tags.push({ text: '✨ Viral potential if hook fixed', cls: 'green' });
-    if (r.hook?.score < 5) tags.push({ text: '⚠ Hook too slow', cls: 'orange' });
-    if (r.audio_quality?.score < 5) tags.push({ text: '🎵 Audio off-beat', cls: 'red' });
+    if (r.predicted_performance === 'viral_potential') tags.push({ text: '✨ Viral potential', cls: 'green' });
+    if (r.hook?.score < 5) tags.push({ text: '⚠ Hook needs work', cls: 'orange' });
+    if (r.audio_quality?.score < 5) tags.push({ text: '🎵 Audio issue', cls: 'red' });
     if (r.retention?.score < 5) tags.push({ text: '📉 Retention risk', cls: 'orange' });
-    if (r.editing?.score >= 7) tags.push({ text: '✂ Editing is strong', cls: 'green' });
+    if (r.visual_quality?.score >= 7) tags.push({ text: '🎬 Visuals strong', cls: 'green' });
     verdictTags.innerHTML = tags.slice(0, 3).map(t => `<span class="verdict-tag ${t.cls}">${t.text}</span>`).join('');
   }
 
@@ -909,14 +909,7 @@ function renderResults(r) {
     }).join('');
   }
 
-  // 4. Wins — simple checkmark list
-  const winsList = document.getElementById('winsList');
-  const wins = r.top_3_wins || r.top_2_wins || [];
-  if (winsList) {
-    winsList.innerHTML = wins.slice(0, 3).map(win =>
-      `<div class="win-item-v2"><div class="win-icon">✅</div><div class="win-text">${win}</div></div>`
-    ).join('');
-  }
+  // Wins section removed — verdict text covers this now
 
   // 5. Reel Scores — horizontal scrollable cards with rings
   const scoresScroll = document.getElementById('reelScoresScroll');
