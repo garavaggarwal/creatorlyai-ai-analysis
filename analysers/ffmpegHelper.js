@@ -65,39 +65,72 @@ function extractThumbnail(videoPath) {
 }
 
 // ─── Extract Key Frames ───────────────────────────────────────────────────────
-// Smart extraction: dense hook (0.5s intervals for first 5s) + scene changes after
+// Comprehensive extraction strategy:
+// 1. First 5s: every 0.5s (dense hook — most critical for analysis)
+// 2. After 5s: every 2s baseline (catches slow sections)
+// 3. Scene change timestamps: exact cut points from FFmpeg
+// 4. Midpoints between scene cuts: captures what's in each shot
+// 5. Last 2s: every 0.3s (catches punchlines, reveals, meme faces, CTAs)
+// 6. Dedup within 0.2s, max 30 frames
 async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
   const timestamps = new Set();
 
-  // First 5 seconds — every 0.5 second (dense hook coverage)
+  // 1. First 5 seconds — every 0.5s (dense hook coverage)
   for (let t = 0; t < Math.min(5, duration); t += 0.5) {
     timestamps.add(Math.round(t * 10) / 10);
   }
 
-  // After 5 seconds — every 3 seconds as baseline
-  for (let t = 6; t < duration - 0.5; t += 3) {
+  // 2. After 5 seconds — every 2s baseline
+  for (let t = 6; t < duration - 2; t += 2) {
     timestamps.add(Math.round(t * 10) / 10);
   }
 
-  // Add scene change timestamps (from FFmpeg scene detection)
+  // 3. Scene change timestamps (exact cut points)
   if (sceneTimestamps && sceneTimestamps.length > 0) {
-    sceneTimestamps.forEach(t => timestamps.add(Math.round(t * 10) / 10));
+    sceneTimestamps.forEach(t => {
+      timestamps.add(Math.round(t * 10) / 10);
+      // 4. Also add midpoint between consecutive scene cuts
+      // (captures what's happening in the middle of each shot)
+    });
+    // Add midpoints between consecutive scene cuts
+    const sortedScenes = [...sceneTimestamps].sort((a, b) => a - b);
+    for (let i = 0; i < sortedScenes.length - 1; i++) {
+      const mid = (sortedScenes[i] + sortedScenes[i + 1]) / 2;
+      timestamps.add(Math.round(mid * 10) / 10);
+    }
+    // Midpoint from last scene cut to end
+    if (sortedScenes.length > 0) {
+      const lastCut = sortedScenes[sortedScenes.length - 1];
+      const mid = (lastCut + duration) / 2;
+      timestamps.add(Math.round(mid * 10) / 10);
+    }
   }
 
-  // Deduplicate within 0.3s of each other
+  // 5. Last 2 seconds — every 0.3s (catches punchlines, reveals, meme faces, CTAs)
+  if (duration > 2) {
+    for (let t = duration - 2; t <= duration - 0.1; t += 0.3) {
+      timestamps.add(Math.round(t * 10) / 10);
+    }
+    // Always include the very last frame
+    timestamps.add(Math.round((duration - 0.05) * 10) / 10);
+  }
+
+  // Deduplicate within 0.2s of each other (tighter than before)
   const sorted = [...timestamps].sort((a, b) => a - b);
   const deduped = [];
   for (const t of sorted) {
-    if (deduped.length === 0 || t - deduped[deduped.length - 1] >= 0.3) {
+    if (deduped.length === 0 || t - deduped[deduped.length - 1] >= 0.2) {
       deduped.push(t);
     }
   }
 
-  // Clamp to valid range and limit to 20 max
+  // Clamp to valid range and limit to 30 max
   const validTimestamps = deduped
-    .map(t => Math.min(t, duration - 0.1))
+    .map(t => Math.min(t, duration - 0.05))
     .filter(t => t >= 0)
-    .slice(0, 20);
+    .slice(0, 30);
+
+  console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t + 's').join(', ')}`);
 
   const framePaths = validTimestamps.map((_, i) => path.join(outputDir, `frame_${i}.jpg`));
 
@@ -113,7 +146,7 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
         })
         .on('end', () => resolve())
         .on('error', (err) => {
-          console.warn(`Frame ${i} extraction failed:`, err.message);
+          console.warn(`Frame ${i} at ${ts}s failed:`, err.message);
           resolve();
         });
     });
