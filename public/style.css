@@ -2909,12 +2909,12 @@ body { padding-bottom: 80px; }
 .reel-scores-scroll::-webkit-scrollbar { display: none; }
 
 .reel-score-card {
-  min-width: 200px;
-  max-width: 220px;
+  min-width: 180px;
+  max-width: 200px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 20px 16px;
+  padding: 20px 14px;
   text-align: center;
   flex-shrink: 0;
   transition: border-color 0.2s;

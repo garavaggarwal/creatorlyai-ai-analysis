@@ -928,7 +928,8 @@ function renderResults(r) {
       const color = s >= 7 ? '#22c55e' : s >= 5 ? '#eab308' : '#ef4444';
       const badgeClass = s >= 7 ? 'strong' : s >= 5 ? 'average' : 'weak';
       const badgeText = s >= 7 ? 'Strong' : s >= 5 ? 'Average' : 'Weak';
-      const desc = (r[c.key].strengths?.[0] || r[c.key].improvements?.[0] || '').slice(0, 60);
+      const rawDesc = r[c.key].strengths?.[0] || r[c.key].improvements?.[0] || '';
+      const desc = rawDesc.length > 45 ? rawDesc.slice(0, rawDesc.lastIndexOf(' ', 45)) : rawDesc;
       const circumference = 188; // 2 * π * 30
       const offset = circumference - (s / 10) * circumference;
       return `
