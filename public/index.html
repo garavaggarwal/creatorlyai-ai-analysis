@@ -187,33 +187,39 @@
     <!-- ── RESULTS ── -->
     <div id="resultsSection" hidden>
 
-      <!-- 1. SCORE CARD — Wireframe layout -->
+      <!-- 1. SCORE CARD -->
       <div class="card result-top-card">
-        <div class="result-top-grid-v2">
-          <div class="result-left-col">
-            <div class="result-top-thumb">
-              <img id="resultThumb" alt="" />
-              <span class="result-duration" id="resultDuration">0:00</span>
-            </div>
-            <p class="result-short-desc" id="overallSummary"></p>
+        <div class="score-card-grid">
+          <div class="score-card-thumb">
+            <img id="resultThumb" alt="" />
+            <span class="result-duration" id="resultDuration">0:00</span>
           </div>
-          <div class="result-right-col">
-            <div class="score-ring-sm" id="scoreRing">
-              <svg viewBox="0 0 120 120">
-                <circle class="ring-bg" cx="60" cy="60" r="50"/>
-                <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
-              </svg>
-              <div class="score-number" id="overallScore">—</div>
+          <div class="score-card-right">
+            <div class="score-card-ring-area">
+              <div class="score-ring-sm" id="scoreRing">
+                <svg viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                  <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"/>
+                </svg>
+                <div class="score-number" id="overallScore">—</div>
+              </div>
             </div>
-            <span class="niche-pill" id="resultNiche">General</span>
-            <span class="perf-pill" id="perfBadge">Average</span>
+            <div class="score-card-niche-area">
+              <span class="niche-pill" id="resultNiche">General</span>
+              <span class="perf-pill" id="perfBadge">Average</span>
+            </div>
           </div>
         </div>
-        <div class="result-verdict-divider"></div>
-        <p class="result-verdict-text" id="verdictText"></p>
+        <p class="score-card-desc" id="overallSummary"></p>
       </div>
 
-      <!-- 2. TOP FIXES -->
+      <!-- 2. VERDICT (separate card) -->
+      <div class="card verdict-card-v2">
+        <h3 class="verdict-header">What's the verdict?</h3>
+        <p class="verdict-body" id="verdictText"></p>
+      </div>
+
+      <!-- 3. TOP FIXES -->
       <div class="section-label">TOP FIXES</div>
       <div class="card fixes-card-v2">
         <div id="fixesList"></div>
