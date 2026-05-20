@@ -3138,3 +3138,68 @@ body { padding-bottom: 80px; }
 /* Score ring enlarged in top card - Trigger redeploy */
 .score-ring-sm { width: 130px; height: 130px; }
 .score-ring-sm .score-number { font-size: 2.5rem; font-weight: 900; }
+
+/* History Skeleton Loading */
+.history-skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.history-skeleton-thumb {
+  width: 48px;
+  height: 80px;
+  border-radius: 8px;
+  background: var(--bg3);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.history-skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.history-skeleton-line {
+  height: 14px;
+  background: var(--bg3);
+  border-radius: 4px;
+  width: 75%;
+  position: relative;
+  overflow: hidden;
+}
+.history-skeleton-line.short {
+  width: 35%;
+}
+.history-skeleton-score {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg3);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Pulsing Animation */
+.history-skeleton-thumb::after,
+.history-skeleton-line::after,
+.history-skeleton-score::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: pulse-shimmer 1.6s infinite ease-in-out;
+}
+
+@keyframes pulse-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

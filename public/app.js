@@ -657,6 +657,37 @@ async function fetchAndRenderHistory() {
   const authToken = session?.access_token || null;
   if (!authToken) { renderHistoryPage(); return; }
 
+  // Immediately show pulse-type loading skeleton
+  if (historyPageList) {
+    historyPageList.innerHTML = `
+      <div class="history-skeleton-item">
+        <div class="history-skeleton-thumb"></div>
+        <div class="history-skeleton-info">
+          <div class="history-skeleton-line short"></div>
+          <div class="history-skeleton-line"></div>
+        </div>
+        <div class="history-skeleton-score"></div>
+      </div>
+      <div class="history-skeleton-item">
+        <div class="history-skeleton-thumb"></div>
+        <div class="history-skeleton-info">
+          <div class="history-skeleton-line short"></div>
+          <div class="history-skeleton-line"></div>
+        </div>
+        <div class="history-skeleton-score"></div>
+      </div>
+      <div class="history-skeleton-item">
+        <div class="history-skeleton-thumb"></div>
+        <div class="history-skeleton-info">
+          <div class="history-skeleton-line short"></div>
+          <div class="history-skeleton-line"></div>
+        </div>
+        <div class="history-skeleton-score"></div>
+      </div>
+    `;
+    if (historyPageEmpty) historyPageEmpty.hidden = true;
+  }
+
   try {
     const resp = await fetch(`${API_BASE}/api/history`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -672,7 +703,10 @@ async function fetchAndRenderHistory() {
 }
 
 function renderHistoryPage() {
-  if (!historyData || historyData.length === 0) {
+  // Only display successfully completed analyses
+  const successHistory = (historyData || []).filter(item => item.status !== 'failed');
+
+  if (successHistory.length === 0) {
     if (historyPageList) historyPageList.innerHTML = '';
     if (historyPageEmpty) historyPageEmpty.hidden = false;
     return;
@@ -680,7 +714,7 @@ function renderHistoryPage() {
   
   if (historyPageEmpty) historyPageEmpty.hidden = true;
   
-  historyPageList.innerHTML = historyData.map(item => {
+  historyPageList.innerHTML = successHistory.map(item => {
     const isFailed = item.status === 'failed';
     const score = item.score || 0;
     const scoreClass = isFailed ? 'failed' : (score >= 7 ? 'high' : score >= 5 ? 'mid' : 'low');
