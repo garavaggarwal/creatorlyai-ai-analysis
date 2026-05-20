@@ -73,78 +73,92 @@ function extractThumbnail(videoPath) {
 // 5. Last 2s: every 0.3s (catches punchlines, reveals, meme faces, CTAs)
 // 6. Dedup within 0.2s, max 30 frames
 async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
-  const timestamps = new Set();
+  const timestamps = new Set(); // Stores integer deciseconds (tenths of a second)
 
-  // 1. First 5 seconds — every 0.5s (dense hook coverage)
-  for (let t = 0; t < Math.min(5, duration); t += 0.5) {
-    timestamps.add(Math.round(t * 10) / 10);
+  // 1. Hook region: First 5 seconds — every 0.2s (dense hook coverage)
+  const hookEnd = Math.min(5, duration);
+  for (let t = 0; t <= hookEnd; t += 0.2) {
+    timestamps.add(Math.round(t * 10));
   }
 
-  // 2. After 5 seconds — every 2s baseline
-  for (let t = 6; t < duration - 2; t += 2) {
-    timestamps.add(Math.round(t * 10) / 10);
+  // 2. Middle region: After 5 seconds — adaptive 1.0s or 2.0s interval
+  if (duration > 8) {
+    const midEnd = duration - 3;
+    const step = duration <= 60 ? 1.0 : 2.0;
+    for (let t = 5.0; t <= midEnd; t += step) {
+      timestamps.add(Math.round(t * 10));
+    }
   }
 
-  // 3. Scene change timestamps (exact cut points)
+  // 3. Scene change timestamps & midpoints (exact cut points from FFmpeg selection)
   if (sceneTimestamps && sceneTimestamps.length > 0) {
     sceneTimestamps.forEach(t => {
-      timestamps.add(Math.round(t * 10) / 10);
-      // 4. Also add midpoint between consecutive scene cuts
-      // (captures what's happening in the middle of each shot)
+      timestamps.add(Math.round(t * 10));
     });
     // Add midpoints between consecutive scene cuts
     const sortedScenes = [...sceneTimestamps].sort((a, b) => a - b);
     for (let i = 0; i < sortedScenes.length - 1; i++) {
       const mid = (sortedScenes[i] + sortedScenes[i + 1]) / 2;
-      timestamps.add(Math.round(mid * 10) / 10);
+      timestamps.add(Math.round(mid * 10));
     }
     // Midpoint from last scene cut to end
     if (sortedScenes.length > 0) {
       const lastCut = sortedScenes[sortedScenes.length - 1];
       const mid = (lastCut + duration) / 2;
-      timestamps.add(Math.round(mid * 10) / 10);
+      timestamps.add(Math.round(mid * 10));
     }
   }
 
-  // 5. Last 2 seconds — every 0.3s (catches punchlines, reveals, meme faces, CTAs)
-  if (duration > 2) {
-    for (let t = duration - 2; t <= duration - 0.1; t += 0.3) {
-      timestamps.add(Math.round(t * 10) / 10);
+  // 4. Ending region: Last 3 seconds — every 0.3s (catches reveals, punchlines, CTAs)
+  if (duration > 0) {
+    const startEnd = Math.max(0, duration - 3);
+    for (let t = startEnd; t <= duration; t += 0.3) {
+      timestamps.add(Math.round(t * 10));
     }
-    // Always include the very last frame
-    timestamps.add(Math.round((duration - 0.05) * 10) / 10);
+    // Always include the very last frame (with a slight offset)
+    timestamps.add(Math.round((duration - 0.05) * 10));
   }
 
-  // Deduplicate within 0.2s of each other (tighter than before)
+  // Deduplicate within 0.2s of each other (2 deciseconds threshold)
   const sorted = [...timestamps].sort((a, b) => a - b);
   const deduped = [];
-  for (const t of sorted) {
-    if (deduped.length === 0 || t - deduped[deduped.length - 1] >= 0.2) {
-      deduped.push(t);
+  for (const ds of sorted) {
+    if (deduped.length === 0 || ds - deduped[deduped.length - 1] >= 2) {
+      deduped.push(ds);
     }
   }
 
-  // Clamp to valid range and limit to 30 max
+  // Clamp to valid range, map back to seconds, and limit to 75 max frames
   const validTimestamps = deduped
+    .map(ds => ds / 10)
     .map(t => Math.min(t, duration - 0.05))
     .filter(t => t >= 0)
-    .slice(0, 30);
+    .slice(0, 75);
 
-  console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t + 's').join(', ')}`);
+  console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t.toFixed(1) + 's').join(', ')}`);
 
-  const framePaths = validTimestamps.map((_, i) => path.join(outputDir, `frame_${i}.jpg`));
+  const framePaths = [];
+  const finalTimestamps = [];
 
   for (let i = 0; i < validTimestamps.length; i++) {
     const ts = validTimestamps[i];
+    const filename = `frame_${i}.jpg`;
+    const targetPath = path.join(outputDir, filename);
     await new Promise((resolve) => {
       ffmpeg(videoPath)
         .screenshots({
           timestamps: [ts],
-          filename: `frame_${i}.jpg`,
+          filename: filename,
           folder: outputDir,
           size: '720x?',
         })
-        .on('end', () => resolve())
+        .on('end', () => {
+          if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 0) {
+            framePaths.push(targetPath);
+            finalTimestamps.push(ts);
+          }
+          resolve();
+        })
         .on('error', (err) => {
           console.warn(`Frame ${i} at ${ts}s failed:`, err.message);
           resolve();
@@ -152,7 +166,7 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
     });
   }
 
-  return framePaths;
+  return { framePaths, frameTimestamps: finalTimestamps };
 }
 
 // ─── Scene Change Detection ───────────────────────────────────────────────────
@@ -269,11 +283,7 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
 
   // Extract frames (using scene change timestamps for smarter sampling)
   fs.mkdirSync(framesOutputDir, { recursive: true });
-  const framePaths = await extractFrames(videoPath, info.duration, framesOutputDir, scenes);
-  const validFrames = framePaths.filter(f => {
-    if (!f || !fs.existsSync(f)) return false;
-    return fs.statSync(f).size > 0;
-  });
+  const { framePaths, frameTimestamps } = await extractFrames(videoPath, info.duration, framesOutputDir, scenes);
 
   // Calculate pacing metrics
   const cutsPerMinute = info.duration > 0 ? (scenes.length / info.duration) * 60 : 0;
@@ -302,11 +312,12 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
   // Extract thumbnail
   const thumbnailBase64 = await extractThumbnail(videoPath);
 
-  console.log(`✅ ffmpeg done. Duration: ${info.duration}s, Cuts: ${scenes.length}, Frames: ${validFrames.length}`);
+  console.log(`✅ ffmpeg done. Duration: ${info.duration}s, Cuts: ${scenes.length}, Frames: ${framePaths.length}`);
 
   return {
     videoInfo: info,
-    framePaths: validFrames,
+    framePaths: framePaths,
+    frameTimestamps: frameTimestamps,
     sceneTimestamps: scenes,
     silenceSegments: silenceReal.gaps,
     thumbnail: thumbnailBase64,

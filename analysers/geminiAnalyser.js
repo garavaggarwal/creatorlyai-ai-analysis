@@ -52,6 +52,8 @@ VIDEO DATA:
 - Niche hint: "${niche || 'general'}"
 - Caption: "${caption || '(none)'}"
 
+IMPORTANT: The LAST frame(s) may contain a punchline, meme face, or comedic reveal that defines the reel type. A reel that shows a "before" and ends with a funny/meme face is a COMEDY reel, not a transformation reel. Look at ALL frames before classifying.
+
 Return ONLY this JSON:
 {
   "reel_type": "one of: singing | music_performance | talking_head | educational | meme | comedy | transformation | storytelling | vlog | cinematic | product_ad | beauty | fashion | fitness | food | dance | motivational | lip_sync | reaction | faceless_text | general",
@@ -77,15 +79,8 @@ function buildAnalysisPrompt(computed, caption, hashtags, niche, classification)
   const hookType = classification?.hook_type || 'none';
   const creatorIntent = classification?.creator_intent || '';
 
-  // Build frame timestamp list
-  const frameTimestamps = [];
-  const videoDuration = computed.videoInfo?.duration || 0;
-  for (let t = 0; t < Math.min(5, videoDuration); t += 0.5) {
-    frameTimestamps.push(t.toFixed(1));
-  }
-  for (let t = 6; t < videoDuration - 0.5; t += 3) {
-    frameTimestamps.push(t.toFixed(1));
-  }
+  // Build frame timestamp list from the actually extracted frames
+  const frameTimestamps = (computed.frameTimestamps || []).map(t => t.toFixed(1));
 
   // Human-readable audio description
   let audioDesc = 'not measured';

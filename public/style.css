@@ -3136,5 +3136,5 @@ body { padding-bottom: 80px; }
 }
 
 /* Score ring enlarged in top card */
-.score-ring-sm { width: 72px; height: 72px; }
-.score-ring-sm .score-number { font-size: 0.85rem; font-weight: 900; }
+.score-ring-sm { width: 130px; height: 130px; }
+.score-ring-sm .score-number { font-size: 2.5rem; font-weight: 900; }
