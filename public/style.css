@@ -3135,6 +3135,6 @@ body { padding-bottom: 80px; }
   white-space: normal;
 }
 
-/* Score ring enlarged in top card */
+/* Score ring enlarged in top card - Trigger redeploy */
 .score-ring-sm { width: 130px; height: 130px; }
 .score-ring-sm .score-number { font-size: 2.5rem; font-weight: 900; }
