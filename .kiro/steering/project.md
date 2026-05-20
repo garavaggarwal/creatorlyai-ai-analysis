@@ -1,17 +1,17 @@
 # Creatorly AI — Project Steering File
 
-This file gives full context to any Kiro instance working on this project. Read it before making any changes.
+This file gives full context to any AI assistant (Kiro, Cursor, Copilot, etc.) working on this project. Read it completely before making any changes.
 
-----
+---
 
-## What This Project Is 
+## What This Project Is
 
 **Creatorly AI** is a "Video Lab" SaaS tool for Indian Instagram/Reels creators. Users upload a video (or paste an Instagram URL) and get a deep AI-powered analysis — hook strength, retention, audio sync, editing quality, trend-fit score, suggested captions, hashtags, and a sync timeline. The result is called the **Creatorly Score**.
 
 **Live URLs:**
 - Frontend: `https://creatorlyai.in` (Vercel)
-- Backend API: `https://web-production-7bc95.up.railway.app` (Railway)
-- Backend API (custom domain, for Indian ISPs): `https://api.creatorlyai.in` → Railway (CNAME setup in progress)
+- Backend API: `https://api.creatorlyai.in` (Railway, custom domain)
+- Backend API (fallback): `https://web-production-7bc95.up.railway.app` (Railway)
 - GitHub repo: `garavaggarwal/creatorlyai-ai-analysis`
 
 ---
@@ -20,10 +20,12 @@ This file gives full context to any Kiro instance working on this project. Read 
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vanilla HTML/CSS/JS — served statically from `/public` |
+| Frontend | Vanilla HTML/CSS/JS — served statically from `/public` via Vercel |
 | Backend | Node.js + Express — deployed on Railway |
 | AI Analysis | Google Gemini API (vision + text) via `@google/generative-ai` |
 | Video Processing | FFmpeg (frame extraction, audio stats, scene cuts, thumbnail) via `ffmpeg-static` + `fluent-ffmpeg` |
+| Instagram Download | Apify (`apify/instagram-scraper` actor) as primary, Cobalt/yt-dlp as fallbacks |
+| Profile Analytics | Apify (`apify/instagram-profile-scraper` actor) |
 | Database / Auth | Supabase (PostgreSQL + Auth) |
 | CI/CD | GitHub → Railway (auto-deploy on push to `main`) |
 
@@ -39,25 +41,21 @@ This file gives full context to any Kiro instance working on this project. Read 
 ├── supabase_migration.sql     # SQL to create video_analyses table (run once in Supabase)
 ├── analysers/
 │   ├── ffmpegHelper.js        # FFmpeg frame extraction, scene cuts, audio stats, thumbnail
-│   ├── geminiAnalyser.js      # Gemini Vision prompt + model fallback chain
+│   ├── geminiAnalyser.js      # 2-stage Gemini analysis (classify → analyse)
 │   └── textAnalyser.js        # Caption + hashtag text analysis
 ├── public/
-│   ├── index.html             # Analyser page (main app + sidebar + bottom nav + history)
-│   ├── app.js                 # Analyser frontend logic (navigation, history, video player)
+│   ├── index.html             # Analyser page (main app)
+│   ├── app.js                 # Analyser frontend logic
 │   ├── auth.js                # Supabase auth module (shared across all pages)
-│   ├── style.css              # Analyser styles (fully responsive, sidebar, bottom nav)
-│   ├── landing.html           # Landing page
-│   ├── landing.css            # Landing page styles
-│   ├── landing.js             # Landing page JS (animations, typewriter, etc.)
-│   ├── login.html             # Login/signup page
-│   ├── login.css              # Login styles
-│   ├── login.js               # Login/signup form logic
-│   ├── profile.html           # Profile analytics page
-│   ├── profile.css            # Profile page styles
-│   └── profile.js             # Profile analytics frontend logic
+│   ├── style.css              # Main styles (responsive, sidebar, bottom nav, results UI)
+│   ├── landing.html/css/js    # Marketing landing page
+│   ├── login.html/css/js      # Login/signup page
+│   ├── profile.html/css/js    # Instagram profile analytics page
+│   └── prompt-generator.html/css/js  # AI video prompt generator page
 ├── apt.txt                    # Railway system packages: ffmpeg, python3, python3-pip
 ├── package.json               # Dependencies + postinstall (installs yt-dlp to /app/bin)
-└── Procfile                   # Railway start command
+├── vercel.json                # Vercel routing config (MUST add route for every new page/file)
+└── Procfile                   # Railway start command: node server.js
 ```
 
 ---
@@ -73,35 +71,11 @@ This file gives full context to any Kiro instance working on this project. Read 
 | `GET` | `/api/history` | Get user's past analyses (completed + failed) |
 | `GET` | `/api/usage` | Get user's analysis usage count |
 | `POST` | `/api/profile-analytics` | Fetch Instagram profile metrics via Apify |
+| `GET` | `/api/image-proxy` | Proxy external images to bypass CORS (Instagram CDN) |
+| `POST` | `/api/generate-prompts` | Generate AI video prompts for tools like Runway, Kling, etc. |
 | `GET` | `/health` | Health check |
 
-All analysis endpoints accept an `Authorization: Bearer <supabase_jwt>` header to identify the user.
-
----
-
-## Analysis Pipeline
-
-```
-Video File / Instagram URL
-  → FFmpeg (extract frames, scene cuts, audio loudness, silence detection, thumbnail)
-  → Gemini Vision API (analyse frames + metadata → JSON scores)
-  → Text Analyser (caption + hashtag scoring)
-  → Score Aggregator (weighted overall score)
-  → Save to Supabase video_analyses table (including thumbnail)
-  → Return to frontend
-```
-
-**Gemini model** is configurable via `GEMINI_MODEL` env var on Railway. Current recommended: `gemini-2.5-flash-preview-05-20`. Falls back through `gemini-1.5-flash` → `gemini-1.5-flash-8b` → `gemini-1.5-pro` if unavailable. The text analyser also uses `GEMINI_MODEL`.
-
-### Gemini Prompt Tone Rules
-- Talk like an Instagram creator coach, NOT a video engineer
-- **NEVER** use: LUFS, pacing degradation, frame cadence, normalization, transformation resolution
-- If a metric is unavailable (N/A), skip it entirely — don't mention it
-- Never state uncertain interpretations as facts (use "may feel" not "completely")
-- Issue text: **under 10 words**
-- Fix text: **under 15 words**
-- Every improvement must reference a timestamp: "At [X]s: [issue]. Fix: [action]."
-- Niche-aware benchmarks (nature vs comedy vs educational)
+All analysis endpoints accept `Authorization: Bearer <supabase_jwt>` header.
 
 ---
 
@@ -110,35 +84,122 @@ Video File / Instagram URL
 | Variable | Purpose |
 |---|---|
 | `GEMINI_API_KEY` | Google Gemini API key (required) |
-| `GEMINI_MODEL` | Gemini model name (optional, defaults to gemini-1.5-flash) |
+| `GEMINI_MODEL` | Gemini model name — set to `gemini-2.5-flash` (current working model) |
 | `SUPABASE_URL` | `https://iqfjyaqgazbcskuworvr.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Supabase service_role key (secret — for server-side DB writes) |
 | `MAX_ANALYSES_PER_USER` | Lifetime analysis limit per user (default: 5) |
 | `MAX_ANALYSES_PER_DAY` | Daily limit (0 = disabled) |
 | `MAX_ANALYSES_PER_MONTH` | Monthly limit (0 = disabled) |
 | `YTDLP_PATH` | Optional: explicit path to yt-dlp binary |
-| `APIFY_API_TOKEN` | Apify API token for Instagram reel download (primary strategy) |
+| `APIFY_API_TOKEN` | Apify API token — required for Instagram reel download AND profile analytics |
+| `DEBUG_ANALYSIS` | Set to `true` to enable full debug trace logging + save to `/debug-logs/` |
 
 ---
 
 ## Supabase Setup
 
 - **Project URL:** `https://iqfjyaqgazbcskuworvr.supabase.co`
-- **Auth providers enabled:** Email/password + Google OAuth
+- **Auth providers:** Email/password + Google OAuth
 - **Google OAuth redirect URI:** `https://iqfjyaqgazbcskuworvr.supabase.co/auth/v1/callback`
 - **Table:** `video_analyses` — created via `supabase_migration.sql`
-- **RLS:** Enabled. Users can only SELECT their own rows. Backend uses service_role key to INSERT/UPDATE (bypasses RLS).
+- **RLS:** Enabled. Users can only SELECT their own rows. Backend uses service_role key to bypass RLS.
 
 ### video_analyses table key fields
 - `id`, `user_id`, `status` (processing/completed/failed), `source` (upload/instagram_url)
 - `niche`, `original_filename`, `instagram_url`, `file_size_mb`
-- All 12 scores: `overall_score`, `hook_score`, `retention_score`, `visual_score`, `audio_score`, `editing_score`, `content_score`, `text_score`, `compliance_score`, `sync_score`, `caption_score`, `hashtag_score`
+- Scores: `overall_score`, `hook_score`, `retention_score`, `visual_score`, `audio_score`, `editing_score`, `content_score`, `text_score`, `compliance_score`, `sync_score`, `caption_score`, `hashtag_score`
 - `predicted_performance`, `video_duration`, `video_resolution`, `video_fps`, `is_vertical`, `has_audio`, `scene_cuts`, `cuts_per_minute`, `silence_gaps`
 - `overall_summary`, `video_summary`, `top_3_wins`, `top_3_fixes`, `suggested_captions`, `suggested_hashtags`, `sync_timeline`
 - `full_result` (JSONB — complete Gemini response)
-- `thumbnail` (text — base64 encoded first frame, added via `ALTER TABLE`)
+- `thumbnail` (text — base64 JPEG, first frame)
 
-**Migration note:** Run `ALTER TABLE public.video_analyses ADD COLUMN IF NOT EXISTS thumbnail text;` in Supabase SQL Editor to add the thumbnail column.
+**Migration:** Run `ALTER TABLE public.video_analyses ADD COLUMN IF NOT EXISTS thumbnail text;` in Supabase SQL Editor.
+
+---
+
+## Analysis Pipeline
+
+```
+Video File / Instagram URL
+  → FFmpeg (smart frame extraction + scene cuts + audio + thumbnail)
+  → Gemini Stage 1: Classify reel type (singing/meme/cinematic/etc.)
+  → Gemini Stage 2: Category-aware analysis (scoring adapts to reel type)
+  → Text Analyser (caption + hashtag scoring)
+  → Score Aggregator (weighted overall score)
+  → Save to Supabase (including thumbnail)
+  → Return to frontend
+```
+
+---
+
+## Frame Extraction Strategy (`ffmpegHelper.js`)
+
+Smart multi-strategy extraction to ensure Gemini sees every important moment:
+
+1. **First 5s: every 0.5s** — dense hook coverage (10 frames)
+2. **After 5s: every 2s baseline** — catches slow sections
+3. **Scene change timestamps** — exact cut points from FFmpeg scene detection
+4. **Midpoints between scene cuts** — captures what's in the middle of each shot
+5. **Last 2s: every 0.3s** — catches punchlines, reveals, meme faces, CTAs
+6. **Dedup within 0.2s** — removes near-duplicate timestamps
+7. **Max 30 frames total**
+
+This ensures last-second reveals (e.g. a meme face shown for <1s at the end) are always captured.
+
+---
+
+## Gemini Analysis (`geminiAnalyser.js`)
+
+### 2-Stage Architecture
+
+**Stage 1 — Classification** (uses first 2 frames only, fast):
+- Classifies reel into 20+ types: singing, meme, comedy, transformation, cinematic, educational, fitness, food, dance, etc.
+- Detects hook type: voice_hook, visual_hook, text_hook, shock_hook, curiosity_hook, etc.
+- Falls back to `general` if classification fails
+
+**Stage 2 — Category-Aware Analysis** (all frames):
+- Scoring weights adapt per reel type (e.g. singing: emotion > cuts; meme: timing > intimacy)
+- Niche-specific guidance for 20+ types
+- Creator coach tone — no jargon
+
+### JSON Response Keys (frontend depends on ALL of these)
+```
+niche, short_description, why_viral, why_rework
+hook, retention, visual_quality, audio_quality, content_structure, editing, text_subtitles, compliance
+  (each has: score, sub_scores, strengths[], improvements[])
+video_summary, overall_summary, predicted_performance
+top_3_wins[], top_3_fixes[], top_2_wins[]
+suggested_captions[], suggested_hashtags[]
+sync_timeline[], sync_score
+_reel_type, _hook_type (metadata, non-breaking)
+```
+
+### Tone Rules
+- Talk like a creator coach, NOT a video engineer
+- NEVER use: LUFS, pacing degradation, frame cadence, normalization, transformation resolution
+- Skip unavailable metrics entirely (no "N/A" comments)
+- Each strength/improvement: complete sentence, 8-12 words
+- top_3_fixes: 2-3 sentences with timestamps and concrete actions
+- why_viral / why_rework: 2 complete sentences each
+
+### Model Fallback Chain
+`GEMINI_MODEL` env var → `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-2.0-flash-lite` → `gemini-1.5-flash`
+
+### Debug Mode
+Set `DEBUG_ANALYSIS=true` on Railway to enable:
+- Full trace logged to console
+- JSON trace saved to `/debug-logs/analysis_TIMESTAMP.json`
+- Includes: classification, rubric, metric interpretation, hallucination risks, raw Gemini response
+
+---
+
+## Instagram URL Download
+
+Four strategies tried in order (`downloadInstagramReel` in `server.js`):
+1. **Apify** (`apify/instagram-scraper`) — primary, uses residential proxies. Requires `APIFY_API_TOKEN`. ~$0.05-0.10/reel.
+2. **Cobalt API** (`api.cobalt.tools`) — tried twice with 2s pause
+3. **yt-dlp** — binary at `/app/bin/yt-dlp` (installed by postinstall script)
+4. **yt-dlp-wrap** — npm package, self-downloads binary as last resort
 
 ---
 
@@ -146,330 +207,159 @@ Video File / Instagram URL
 
 - Pure vanilla JS — no Supabase SDK, uses direct REST API calls
 - `signIn()`, `signUp()`, `signOut()`, `signInWithGoogle()`
-- `handleOAuthCallback()` — processes Google OAuth hash tokens on `/analyser` page
+- `handleOAuthCallback()` — processes Google OAuth hash tokens
 - Session stored in `localStorage` as `creatorly_session`
 - `isLoggedIn()` returns true if token valid OR refresh_token exists
 - Auto-refresh: silently renews token 5 minutes before expiry
-- `getRawSession()` — sync, reads localStorage directly
-- `getSession()` — async, refreshes if expired
+- `getRawSession()` — sync; `getSession()` — async with refresh
 
 ---
 
 ## User Limits & Allowlist
 
-Configured in `config.js`:
-
+In `config.js`:
 ```js
-MAX_ANALYSES_PER_USER: 5,  // lifetime cap (overridable via Railway env var)
-UNLIMITED_EMAILS: [
-  'vansh.2004.vg@gmail.com',
-  'hrithikgarg2017@gmail.com',
-]
+MAX_ANALYSES_PER_USER: 5,
+UNLIMITED_EMAILS: ['vansh.2004.vg@gmail.com', 'hrithikgarg2017@gmail.com']
 ```
-
-These two emails bypass all limits. Add more to `UNLIMITED_EMAILS` as needed.
-
----
-
-## Instagram URL Download
-
-Four strategies tried in order (server.js `downloadInstagramReel`):
-1. **Apify** (`apify/instagram-scraper` actor) — primary strategy, uses residential proxies that Instagram doesn't block. Requires `APIFY_API_TOKEN` env var. Extracts video CDN URL from reel, then downloads locally. ~$0.05–0.10 per reel. Free tier ($5/month) = ~50–100 reels.
-2. **Cobalt API** (`api.cobalt.tools`) — tried twice with 2s pause (fallback)
-3. **yt-dlp** — binary resolved at startup from `/app/bin/yt-dlp` (installed by postinstall script)
-4. **yt-dlp-wrap** npm package — self-downloads binary from GitHub as last resort
-
-**Dependencies:** `apify-client` npm package added for Strategy 1.
-
-**Known issue:** Strategies 2–4 often fail because Instagram blocks Railway datacenter IPs. Apify (Strategy 1) resolves this by running on proxied infrastructure.
-
----
-
-## Screen Lock / Network Drop Recovery
-
-When a user locks their screen or loses connection mid-analysis:
-
-1. `localStorage.creatorly_inflight` is set **before** the request fires with `{ ts, authToken, recordId? }`
-2. On network error, `tryRecoverResult()` polls `/api/result/:id` every 5s for up to 3 minutes
-3. `visibilitychange` event fires when screen unlocks — immediately checks for completed result
-4. `pageshow` event fires when iOS Safari restores page from bfcache — triggers same recovery flow
-5. On page load, `checkPendingOnLoad()` checks for stale in-flight entries (discards if >10 min old)
-
-**Silent recovery (no UI changes):**
-- Recovery happens completely in the background
-- Original progress UI state is preserved (no "Reconnecting..." messages)
-- `pollRecord()` and `pollLatestRecord()` accept a `silent` parameter to suppress UI updates
-- User sees the same progress animation continue seamlessly after unlock
-- Results appear automatically when analysis completes
-
-**iOS/Android specific fixes:**
-- Removed `progressCard.hidden` check from `visibilitychange` handler — recovery works regardless of UI state
-- Added `pageshow` event listener to catch iOS back-forward cache restoration
-- Both events trigger immediate result check + silent polling if needed
+These emails bypass all limits.
 
 ---
 
 ## Navigation System
 
 ### Desktop (≥1024px) — Left Sidebar
-- Fixed 240px sidebar with logo, nav items, and user info at bottom
-- **Collapsible**: toggle button collapses to 64px (icons only), state persisted in localStorage
-- Top header is hidden on desktop (sidebar has the logo)
-- Nav items: Home (→ landing), New Analysis, History, Profile (→ `/profile`)
-- Active state highlighted with color-coded border
+- Fixed 240px sidebar, collapsible to 64px (icons only)
+- State persisted in `localStorage` as `creatorly_sidebar_collapsed`
+- Top header hidden on desktop (sidebar has the logo)
+- Nav items: Home, New Analysis, History, Profile
 
 ### Mobile (<1024px) — Bottom Navigation
-- Fixed bottom nav bar with 4 items: Home, Analyse (+), History, Profile
-- Centre "Analyse" button has elevated purple circle design
-- Profile link navigates to `/profile` page
-- **Profile button shows Instagram profile pic** (proxied via `/api/image-proxy`, saved in localStorage)
-- Falls back to person icon SVG if no username connected or image fails
-- Shows `@username` below the pic when connected
-- Bottom nav hidden on desktop
+- 4 items: Home, Analyse (+), History, Profile
+- Centre "Analyse" button: elevated purple circle
+- Profile button shows Instagram profile pic (proxied via `/api/image-proxy`, saved in `localStorage` as `creatorly_ig_pic`)
+- Falls back to person icon if no username connected
 
-### Navigation Logic (`navigateTo()`)
-- `'home'` → redirects to landing page (`/`)
-- `'analyse'` → **always resets to upload view** (clears any previous results/errors)
-- `'history'` → shows full-page history list, re-fetches from API
+### Navigation Logic
+- `navigateTo('analyse')` — **always resets to upload view** (clears previous results)
+- `navigateTo('history')` — shows history page, re-fetches from API every time
+- `navigateTo('home')` — redirects to landing page
 
 ---
 
-## Analysis History
+## Results Page Layout (`index.html` + `app.js`)
 
-### Backend (`GET /api/history`)
-- Returns last 50 analyses for the authenticated user
-- Includes both `completed` and `failed` analyses
-- Returns: `id`, `createdAt`, `source`, `status`, `filename`, `score`, `thumbnail`, `summary`, `niche`, `duration`, `error`
-- `summary` is derived from `overall_summary` or `video_summary` (Gemini-generated one-liner)
+### Section Order:
+1. **Score Card** — thumbnail (left, small, 9:16), score ring + niche pill + perf badge (right, 80/20 split), description below
+2. **Verdict Card** — separate card with "What's the verdict?" header + 2-line verdict text
+3. **TOP FIXES** — numbered items with High/Medium/Low impact badges
+4. **REEL SCORES** — horizontally scrollable cards with ring charts (Hook, Visuals, Editing, Audio, Content, Retention, Text)
+5. **VIDEO TIMELINE ANALYSIS** — full-width video player + color-coded timeline bar + issue rows
+6. **CAPTION IDEAS** — 5 captions, each with Copy button
+7. **TOP HASHTAGS FOR THIS REEL** — 10 hashtag pills, clickable to copy
+8. **Analyse Another Reel** button
 
-### Frontend (History Page)
-- Full-page list view with each item showing: thumbnail, 3-5 word video description, date, niche badge, score
-- **Re-fetches history from API every time the History tab is opened** (fixes stale data / Railway cold start issues)
-- Thumbnail shown as actual video screenshot (base64 JPEG from first frame)
-- Description shows first 3-5 words of the video summary (not the raw filename)
-- Failed analyses shown with red border, ❌ icon, "Failed" badge, and truncated error message
-- Clicking a completed item loads full analysis results
-- Clicking a failed item shows the error
+### Score Card Layout (confirmed wireframe):
+```
+┌─────────┐  ┌──────────────────────┐
+│         │  │        (7.5/10)      │  ← 80% = Score ring
+│  thumb  │  │                      │
+│ (small) │  ├──────────────────────┤
+│  0:38   │  │ Reaction · Average   │  ← 20% = Niche + Badge
+└─────────┘  └──────────────────────┘
+Short description of what the reel is about
+```
 
-### Thumbnails
-- Extracted during FFmpeg analysis as base64 JPEG (320px wide, first frame)
-- Stored in `thumbnail` column of `video_analyses` table
-- Shown in history list and next to score ring on results page
-- `extractThumbnail()` in `ffmpegHelper.js` — uses `.screenshots()` (terminal method, no `.run()`)
+### Reel Score Cards:
+- Horizontally scrollable
+- Each card: ring chart (color-coded) + score + label + Strong/Average/Weak badge + 2 bullet points
+- 2 bullet points = 1 strength + 1 improvement (complete sentences, no truncation)
 
----
-
-## Video Player + Timeline (Premium Redesign)
-
-### Premium Video Player
-- Bigger player with rounded container and dark UI
-- Big play button overlay (disappears on play, reappears on pause/end)
-- Full controls: play/pause, current time, draggable scrubber, duration, mute, replay
-- Scrubber syncs bidirectionally with timeline playhead
-- Touch-friendly drag seeking for mobile
-- Video stored as Object URL in browser memory (current session only)
-
-### Interactive Timeline
-- Color-coded segments on timeline bar (green=good, yellow=audio, blue=text, red=visual)
-- Emoji markers on timeline (🔊 🎥 📝) — tappable/clickable
-- Clicking a marker jumps video to that timestamp and pauses
-- Expandable issue cards (collapsed by default, expand on tap)
-- Each card shows: timestamp, colored dot, issue title, "Jump to moment" button
-- No verbose text — short creator-friendly language only
-- Timeline bar is clickable to seek video
-
-### Issue Card UX
-- Default collapsed: "7.2s ● This part feels slow"
-- Expanded: action button "Jump to moment"
-- Cards animate on expand/collapse
-- Only one card expanded at a time
-
----
-
-## Score Breakdown UI
-
-- **Horizontally scrollable chips** — each chip shows icon, score number, and label
-- **Detail card below** — shows full detail (sub-scores, strengths, improvements) for the selected metric
-- Only one detail card visible at a time
-- First chip auto-selected on load
-- Active chip highlighted with color-coded border and glow (green/yellow/red)
-- 8 metrics: Hook, Retention, Visual, Audio, Content, Editing, Text, Compliance
-- **Caption Analysis and Hashtag Analysis cards have been removed** from the results page (suggested captions/hashtags still shown)
+### Timeline:
+- Full-width video player above timeline (current session only)
+- Color-coded bar: red=critical, amber=improve, green=good (NO text inside segments)
+- Issue rows below bar (only actual issues, not every frame)
+- Draggable cursor (mouse + touch)
+- Clicking thumbnail in score card scrolls to video
 
 ---
 
 ## Profile Analytics (`/profile`)
 
-A dedicated page for Instagram creator profile metrics. Uses Apify's `instagram-profile-scraper` actor.
+- Endpoint: `POST /api/profile-analytics` — uses `apify/instagram-profile-scraper`
+- First visit: blurred preview + unlock card (enter username)
+- Return visits: skeleton loading → auto-fetches saved username
+- Username saved in `localStorage` as `creatorly_ig_username`
+- Profile pic saved in `localStorage` as `creatorly_ig_pic` (proxied URL)
+- Change username: edit icon (✏️) next to profile name → popup modal
 
-### Endpoint: `POST /api/profile-analytics`
-- Input: `{ username: "virat.kohli" }`
-- Requires `APIFY_API_TOKEN` env var
-- Returns profile data + calculated metrics (~15–30 seconds)
-
-### 8 Metrics Calculated (from last 10 reels):
-1. **Avg Reel Views** — mean views across last 10 reels
-2. **Avg Likes** — mean likes across last 10 reels
-3. **Avg Comments** — mean comments across last 10 reels
-4. **Avg Shares** — mean shares across last 10 reels (virality indicator)
-5. **Avg Saves** — mean saves across last 10 reels (content value signal)
-6. **ER by Followers (%)** — (Likes+Comments+Shares+Saves) ÷ Followers × 100
-7. **ER by Views (%)** — (Likes+Comments+Shares+Saves) ÷ Views × 100
-8. **Reach Efficiency** — Views ÷ Followers (shows as multiplier like 2.5x)
-
-### Frontend Components:
-- **Blurred preview + unlock card** — shown on first visit (no username saved)
-- **Skeleton loading** — pulsing card placeholders while data loads (no spinner)
-- Profile header (avatar fallback, name, bio, verified badge, niche tag, edit button)
-- Stats row (followers + total posts only, no following)
-- Key metrics grid (8 metric cards with color-coded values)
-- Views & likes trend bar chart (last 10 posts)
-- Recent posts grid with emoji fallbacks (Instagram CDN blocks cross-origin images) — clickable → opens Instagram
-- **Change username popup** — edit icon next to profile name opens a modal with blurred backdrop, input for new username, Update button, and ✕ close button
+### 8 Metrics (from last 10 reels):
+1. Avg Reel Views
+2. Avg Likes
+3. Avg Comments
+4. Avg Shares
+5. Avg Saves
+6. ER by Followers (%) = (Likes+Comments+Shares+Saves) ÷ Followers × 100
+7. ER by Views (%) = (Likes+Comments+Shares+Saves) ÷ Views × 100
+8. Reach Efficiency = Views ÷ Followers
 
 ### Niche Detection:
-- Auto-detected from bio text + recent captions using keyword matching
+- Auto-detected from bio + captions using keyword matching
 - 12 categories: Fitness, Travel, Food, Tech, Fashion, Beauty, Comedy, Education, Business, Music, Photography, Lifestyle
-- Falls back to Instagram business category if available
-
-### Username Persistence:
-- Saved in `localStorage` as `creatorly_ig_username`
-- Auto-fetches on return visits (shows skeleton loading)
-- Change via edit popup → saves new username → re-fetches
-
-### Files:
-- `public/profile.html` — page structure (blurred preview, skeleton, results, popup)
-- `public/profile.css` — profile-specific styles (skeleton animation, popup overlay)
-- `public/profile.js` — fetch + render logic
-
-### CSS Note:
-- `.popup-overlay[hidden] { display: none }` — required because `display: flex` overrides the HTML `hidden` attribute
 
 ---
 
-## Frontend Pages
+## Screen Lock / Network Drop Recovery
 
-### `/analyser` (index.html + app.js)
-- Two tabs: **Upload Reel** and **Instagram Link**
-- **Credits bar** at top showing "X used / 5 available" with purple gradient progress bar (fetches from `/api/usage`)
-- Submit button always says "Analyse Reel" (disabled until file selected / URL entered)
-- Progress card shows 3-step animation during analysis
-- Results: verdict card (score + viral potential), top 3 fixes (action-first), hook rewrite section, retention timeline + video player, what's working (wins), deep metrics (score breakdown chips), caption ideas, video info
-- **Section order**: Verdict → Fix These to Go Viral → Better Hook Ideas → Retention Timeline → What's Working → Deep Metrics → Caption Ideas → Video Info → Analyse Another
-- **Verdict labels**: "Viral Potential 🔥" / "Strong Content" / "Good Foundation" / "Needs Rework"
-- **Performance badges**: "🔥 Viral Potential" / "📈 High Reach" / "⚡ Good Foundation" / "🔧 Needs Rework"
-- Hashtags section removed — replaced with Hook Rewrite section
-- Error card with "Try Again" button
-- History page (toggled via navigation, re-fetches on every open)
-- Desktop: left sidebar (collapsible), no top header
-- Mobile: top header + bottom navigation bar
-
-### `/login` (login.html + login.js)
-- Split layout: left panel (desktop only) with animated reel mockups + stats
-- Right panel: email/password login + signup tabs + Google OAuth button
-- Mobile: fixed top bar "Creatorly AI" links to homepage (real HTML element, not CSS pseudo — iOS Safari fix)
-- Session persists via localStorage with auto-refresh
-
-### `/` (landing.html + landing.js)
-- Marketing landing page with hero, live demo section, how-it-works, features grid, testimonials carousel, CTA
-
-### `/profile` (profile.html + profile.js + profile.css)
-- Instagram profile analytics page
-- User enters Instagram username → Apify scrapes profile data → renders analytics
-- **Profile photo** loaded via `/api/image-proxy` to bypass Instagram CDN CORS
-- **Reel thumbnails** also loaded via image proxy with fallback to emoji icons
-- Key metrics: Avg Views, Avg Likes, Avg Comments, Avg Shares, Avg Saves, ER by Followers, ER by Views, Reach Efficiency
-- Views/Likes trend chart (bar chart, last 10 posts)
-- Recent posts grid with thumbnails, likes, comments
-- Bottom nav: Home, Analyse, History, Profile (consistent with analyser page)
-- Username saved in localStorage for persistence across sessions
+1. `localStorage.creatorly_inflight` set before request fires: `{ ts, authToken, recordId? }`
+2. On network error: `tryRecoverResult()` polls every 5s for up to 3 minutes
+3. `visibilitychange` (screen unlock) + `pageshow` (iOS bfcache) → silent background recovery
+4. `checkPendingOnLoad()` on page load — discards entries >10 min old
+5. Recovery is **silent** — no "Reconnecting..." messages, original progress UI preserved
 
 ---
 
-## Image Proxy (`GET /api/image-proxy`)
+## Analysis History
 
-- Proxies external image URLs through the server to bypass CORS
-- Used for Instagram profile photos and reel thumbnails
-- Accepts `?url=<encoded_url>` query parameter
-- Sets `Cache-Control: public, max-age=86400` (24h cache)
-- Falls back gracefully on error
+- `GET /api/history` — returns last 50 analyses (completed + failed)
+- Failed analyses shown with red border, ❌ icon, error message
+- Clicking completed item loads full results
+- History re-fetches from API every time the tab is opened
 
-### `/profile` (profile.html + profile.js + profile.css)
-- First visit: blurred preview cards + unlock overlay (enter username)
-- Return visits: skeleton loading animation → auto-fetches saved username
-- Displays: profile header (with edit button), 8 key metrics, views/likes trend chart, recent posts (clickable → Instagram)
-- Change username popup: edit icon → blurred modal → enter new username → Update
-- Bottom nav with Profile tab active
-- Auth required (redirects to login if not logged in)
+---
+
+## Image Proxy (`GET /api/image-proxy?url=...`)
+
+- Proxies Instagram CDN images through the server to bypass CORS
+- Used for: profile photos, reel thumbnails
+- 24h cache header
+- Graceful fallback on error
+
+---
+
+## Credits Bar
+
+- Shows "X used / 5 available" with purple gradient progress bar
+- Fetches from `GET /api/usage` on page load
+- Hidden until data loads
+
+---
+
+## Custom Domain
+
+- `api.creatorlyai.in` → Railway (CNAME to `i1uwfu0h.up.railway.app`)
+- All `API_BASE` in frontend uses `https://api.creatorlyai.in`
+- CORS in `server.js` allows `https://api.creatorlyai.in`
 
 ---
 
 ## Known Issues / TODO
 
-- **Indian ISP blocking Railway** — ~~Many Indian ISPs block `*.up.railway.app` domains.~~ **RESOLVED**: Custom domain `api.creatorlyai.in` is active (CNAME → `i1uwfu0h.up.railway.app`). All `API_BASE` URLs now use `https://api.creatorlyai.in`.
-- **Railway idle timeout** — Container sleeps after ~17 seconds of inactivity on the hobby plan ($5/month credit). Wakes on request but Indian users can't trigger wake-up due to ISP blocking.
-- **Instagram URL blocking** — ~~Railway IPs are blocked by Instagram.~~ **Resolved** by adding Apify as primary download strategy (uses residential proxies). Cobalt/yt-dlp remain as fallbacks.
-- **yt-dlp-wrap deprecated** — npm warns `yt-dlp-wrap@2.3.12` is no longer supported. Works for now but may need replacing.
-- **`fluent-ffmpeg` deprecated** — npm warns about this too. Works fine currently.
-- **Google OAuth test users** — while the Google Cloud OAuth app is in "testing" mode, only added test users can sign in with Google. Need to publish the app for all users.
-- **Thumbnail column migration** — must run `ALTER TABLE public.video_analyses ADD COLUMN IF NOT EXISTS thumbnail text;` manually in Supabase. Old analyses won't have thumbnails.
-
----
-
-## Kiro Hooks
-
-No active hooks. The `agentStop` hook for auto-updating the steering file has been removed. Steering file updates are done manually on request only.
-
----
-
-## Credits Bar (Analyser Page)
-
-- Shown at the top of the analyser page, above the upload card
-- Displays "X used / 5 available" with a purple gradient progress bar
-- Fetches data from `GET /api/usage` on page load
-- Only visible when user is logged in
-- Bar fills proportionally (1/5 = 20%, 2/5 = 40%, etc.)
-- Hidden until usage data is successfully fetched
-
----
-
-## Custom Domain Setup (api.creatorlyai.in)
-
-Indian ISPs block `*.up.railway.app`. To fix this:
-1. Railway custom domain added: `api.creatorlyai.in` → port 8080
-2. DNS records needed on GoDaddy:
-   - CNAME: `api` → `i1uwfu0h.up.railway.app` (TTL: 1/2 hour)
-   - TXT: `_railway-verify.api` → `railway-verify=2b07ca81be3600b0e24afefea4...` (from Railway)
-3. Once verified, update `API_BASE` in `public/app.js` to `https://api.creatorlyai.in`
-4. Also update CORS allowed origins in `server.js` (already added `https://api.creatorlyai.in`)
-
-**Status:** DNS verified, custom domain active. All `API_BASE` URLs switched to `https://api.creatorlyai.in`.
-
----
-
-## Prompt Generator (`/prompt-generator`)
-
-- Page at `public/prompt-generator.html` + `prompt-generator.js` + `prompt-generator.css`
-- User describes reel idea (min 10 chars, max 500) + selects AI video tool (Runway, Kling, Sora, Pika, Vidu, Hailuo, or General)
-- Backend `POST /api/generate-prompts` sends to Gemini → returns 5 detailed video generation prompts
-- Each prompt displayed in a card with a "Copy" button
-- Auth-gated (redirects to login if not logged in)
-- Mobile-first dark UI matching existing design
-- Tools supported: Runway Gen-3, Kling AI, Sora, Pika, Vidu, Hailuo MiniMax, General
-- Prompts optimized for Indian audience, vertical video (9:16), Instagram Reels best practices
-
----
-
-## Bottom Navigation (Mobile)
-
-Consistent 5-item bottom nav across all authenticated pages:
-1. **Home** — links to `/` (landing page)
-2. **Prompts** — links to `/prompt-generator`
-3. **Analyse** — center elevated purple circle button (links to `/analyser`)
-4. **History** — links to `/analyser#history`
-5. **Profile** — links to `/profile`
-
-Pages with this nav: `index.html` (analyser), `profile.html`, `prompt-generator.html`
+- **Railway idle timeout** — Container sleeps after ~17s inactivity on hobby plan. Wakes on request.
+- **Google OAuth test users** — App is in "testing" mode; only added test users can sign in with Google. Need to publish.
+- **Thumbnail column migration** — Run `ALTER TABLE public.video_analyses ADD COLUMN IF NOT EXISTS thumbnail text;` in Supabase.
+- **Apify video URL extraction** — `apify/instagram-scraper` sometimes returns data without a `videoUrl` field. Multiple field names are tried (`videoUrl`, `video_url`, `videoVersions[0].url`, etc.).
+- **Instagram CDN CORS** — Profile pics and thumbnails can't be loaded directly from browser. Must use `/api/image-proxy`.
 
 ---
 
@@ -477,12 +367,19 @@ Pages with this nav: `index.html` (analyser), `profile.html`, `prompt-generator.
 
 - **No TypeScript** — pure vanilla JS throughout
 - **No frontend framework** — plain HTML/CSS/JS
-- **CSS variables** for theming — defined in `:root` in each CSS file
-- **Mobile-first responsive** — breakpoints at 1024px, 768px, 480px, 390px, 360px
-- **iOS Safari fixes** — `viewport-fit=cover`, `font-size: max(16px, ...)` on inputs, `visibilitychange` for background/foreground detection
+- **CSS variables** for theming — defined in `:root`
+- **Mobile-first** — breakpoints at 1024px, 768px, 480px, 390px, 360px
+- **iOS Safari fixes** — `viewport-fit=cover`, `font-size: max(16px, ...)` on inputs
 - **No `&&` in shell commands** — use `;` or `&` (Windows CMD compatibility)
-- All API calls from frontend include `Authorization: Bearer <token>` header
-- Server extracts user from JWT via `extractUserId(req)` and `extractUserEmail(req)` — no external JWT library
-- **fluent-ffmpeg `.screenshots()`** is a terminal method — never chain `.run()` after it
-- **All CSS/JS references in HTML use relative paths** (`/landing.css`, `/auth.js`) — never absolute Railway URLs
-- **`vercel.json`** must have routes for every static file referenced from HTML (including `auth.js`)
+- All API calls include `Authorization: Bearer <token>` header
+- Server extracts user from JWT via `extractUserId(req)` — no external JWT library
+- **`fluent-ffmpeg .screenshots()`** is a terminal method — NEVER chain `.run()` after it
+- **`vercel.json`** must have a route for every new HTML page AND every JS/CSS file it references
+- **CSS `display: flex` overrides `hidden` attribute** — always add `[hidden] { display: none }` for flex elements that use `hidden`
+- All CSS/JS in HTML use relative paths (`/style.css`, `/auth.js`) — never absolute Railway URLs
+
+---
+
+## Kiro Hooks
+
+No active hooks. Steering file updates are done manually on request only.
