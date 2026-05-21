@@ -510,11 +510,18 @@
 
   // Initialize and inject DOM elements safely
   function initChatbot() {
-    if (document.getElementById('creatorlyChatTrigger')) return; // Avoid double init
+    console.log("[CreatorlyAI Chatbot] Initializing chatbot DOM components...");
+    if (document.getElementById('creatorlyChatTrigger')) {
+      console.log("[CreatorlyAI Chatbot] Chatbot trigger already exists. Skipping init.");
+      return; // Avoid double init
+    }
 
     const body = document.body;
     const head = document.head;
-    if (!body || !head) return;
+    if (!body || !head) {
+      console.warn("[CreatorlyAI Chatbot] document.body or document.head is missing!");
+      return;
+    }
 
     // Inject Custom Styles
     const styleEl = document.createElement('style');
@@ -571,6 +578,7 @@
       </div>
     `;
     body.appendChild(chatPanel);
+    console.log("[CreatorlyAI Chatbot] Chatbot DOM components appended to body successfully!");
 
     messagesContainer = document.getElementById('creatorlyChatMessages');
     chatForm = document.getElementById('creatorlyChatForm');
@@ -663,9 +671,12 @@
   }
 
   // Load handler to wait for document body
+  console.log("[CreatorlyAI Chatbot] Current document readystate:", document.readyState);
   if (document.readyState === 'loading') {
+    console.log("[CreatorlyAI Chatbot] Document is loading, waiting for DOMContentLoaded event...");
     document.addEventListener('DOMContentLoaded', initChatbot);
   } else {
+    console.log("[CreatorlyAI Chatbot] Document is already interactive/complete. Initializing immediately...");
     initChatbot();
   }
 
