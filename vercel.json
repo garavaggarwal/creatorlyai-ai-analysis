@@ -44,6 +44,10 @@
       "dest": "/public/app.js"
     },
     {
+      "src": "/chatbot.js",
+      "dest": "/public/chatbot.js"
+    },
+    {
       "src": "/login.css",
       "dest": "/public/login.css"
     },
