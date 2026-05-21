@@ -1,202 +1,10 @@
 /**
  * CreatorlyAI Chatbot & Strategy Assistant
- * Floating trigger, side panel / bottom sheet drawer, and SSE text streaming.
+ * Full-screen interface implementation.
  */
 
 (function () {
-  // Styles configuration
   const cssStyles = `
-    /* Floating button & Panel Styles */
-    .creatorly-chat-trigger {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: #ffffff;
-      padding: 12px 20px;
-      border-radius: 9999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.4), 0 8px 10px -6px rgba(99, 102, 241, 0.4);
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .creatorly-chat-trigger:hover {
-      transform: translateY(-2px) scale(1.03);
-      box-shadow: 0 20px 25px -5px rgba(168, 85, 247, 0.5), 0 10px 10px -5px rgba(99, 102, 241, 0.5);
-    }
-    .creatorly-chat-trigger:active {
-      transform: translateY(0) scale(0.98);
-    }
-
-    .creatorly-chat-panel {
-      position: fixed;
-      z-index: 10000;
-      background: rgba(15, 12, 30, 0.95);
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: -10px 0 50px rgba(0, 0, 0, 0.5);
-      display: flex;
-      flex-direction: column;
-      font-family: 'Inter', sans-serif;
-      overflow: hidden;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    /* Desktop View Panel (Right Sidebar) */
-    @media (min-width: 768px) {
-      .creatorly-chat-panel {
-        top: 0;
-        right: 0;
-        width: 420px;
-        height: 100%;
-        transform: translateX(100%);
-        border-radius: 16px 0 0 16px;
-      }
-      .creatorly-chat-panel.expanded {
-        transform: translateX(0);
-        opacity: 1;
-        pointer-events: auto;
-      }
-    }
-
-    /* Mobile View Panel (Bottom Sheet) */
-    @media (max-width: 767px) {
-      .creatorly-chat-panel {
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 50vh;
-        transform: translateY(100%);
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
-      }
-      .creatorly-chat-panel.expanded {
-        transform: translateY(0);
-        opacity: 1;
-        pointer-events: auto;
-      }
-    }
-
-    /* Drag Handle for Mobile bottom sheet */
-    .creatorly-chat-drag-handle {
-      display: none;
-      width: 100%;
-      height: 24px;
-      align-items: center;
-      justify-content: center;
-      cursor: grab;
-      touch-action: none;
-    }
-    .creatorly-chat-drag-handle::after {
-      content: '';
-      width: 40px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.25);
-      border-radius: 99px;
-    }
-    @media (max-width: 767px) {
-      .creatorly-chat-drag-handle {
-        display: flex;
-      }
-    }
-
-    /* Chat Elements Layout */
-    .creatorly-chat-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.01);
-    }
-    .creatorly-chat-title-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .creatorly-chat-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      color: #fff;
-    }
-    .creatorly-chat-header-text h4 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-      color: #f8fafc;
-    }
-    .creatorly-chat-header-text span {
-      font-size: 11px;
-      color: #94a3b8;
-    }
-    .creatorly-chat-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .creatorly-chat-btn-clear {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 11px;
-      cursor: pointer;
-      font-weight: 500;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-    .creatorly-chat-btn-clear:hover {
-      color: #ef4444;
-      background: rgba(239, 68, 68, 0.08);
-    }
-    .creatorly-chat-btn-close {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 18px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 4px;
-      transition: color 0.2s;
-    }
-    .creatorly-chat-btn-close:hover {
-      color: #f8fafc;
-    }
-
-    .creatorly-chat-messages-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      scroll-behavior: smooth;
-    }
-    .creatorly-chat-messages-container::-webkit-scrollbar {
-      width: 5px;
-    }
-    .creatorly-chat-messages-container::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 99px;
-    }
-
     /* Message Bubbles */
     .creatorly-msg-row {
       display: flex;
@@ -211,7 +19,7 @@
       gap: 10px;
     }
     .creatorly-msg-bubble {
-      max-width: 80%;
+      max-width: 85%;
       padding: 12px 16px;
       border-radius: 16px;
       font-size: 13.5px;
@@ -356,65 +164,12 @@
       color: #f8fafc;
     }
 
-    /* Input Area */
-    .creatorly-chat-input-area {
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.005);
-    }
-    .creatorly-chat-input-form {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .creatorly-chat-input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 13.5px;
-      color: #f8fafc;
-      outline: none;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .creatorly-chat-input:focus {
-      border-color: rgba(168, 85, 247, 0.5);
-      background: rgba(255, 255, 255, 0.06);
-    }
-    .creatorly-chat-input::placeholder {
-      color: #64748b;
-    }
-    .creatorly-chat-btn-send {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      border: none;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-    .creatorly-chat-btn-send:hover {
-      transform: scale(1.03);
-    }
-    .creatorly-chat-btn-send:disabled {
-      background: rgba(255, 255, 255, 0.05);
-      color: #64748b;
-      cursor: not-allowed;
-      transform: none;
-    }
-
     /* Typist effect container styling */
     .creatorly-streaming-cursor {
       display: inline-block;
       width: 2px;
       height: 14px;
-      background: var(--accent2);
+      background: #a855f7;
       margin-left: 2px;
       animation: creatorly-cursor-blink 1s infinite;
     }
@@ -424,13 +179,9 @@
     }
   `;
 
-  // Declaring elements in IIFE scope
-  let triggerBtn, chatPanel, messagesContainer, chatForm, chatInput, chatSendBtn, chatClearBtn, chatCloseBtn, dragHandle;
-  let isDragging = false;
-  let dragStartY = 0;
-  let dragStartHeight = 0;
+  let messagesContainer, chatForm, chatInput, chatSendBtn, chatClearBtn;
 
-  // Safe storage utility to prevent crashes in private mode or if storage is blocked
+  // Safe storage utility
   const storage = {
     getItem(key) {
       try {
@@ -472,7 +223,6 @@
 
   // Initialize Chatbot global state
   const state = {
-    isExpanded: false,
     messages: safeParseHistory(),
   };
 
@@ -486,176 +236,44 @@
     }
   }
 
-  // Toggle Minimize/Expand handlers
-  function togglePanel(open = null) {
-    if (!chatPanel || !triggerBtn || !chatInput) return;
-    const shouldOpen = open !== null ? open : !state.isExpanded;
-    state.isExpanded = shouldOpen;
-    
-    if (shouldOpen) {
-      chatPanel.classList.add('expanded');
-      triggerBtn.classList.add('hidden');
-      if (state.messages.length === 0) {
-        showFirstTimeGreeting();
-      } else {
-        renderAllMessages();
-      }
-      setTimeout(() => chatInput.focus(), 300);
-    } else {
-      chatPanel.classList.remove('expanded');
-      triggerBtn.classList.remove('hidden');
-      chatPanel.style.height = '';
-    }
-  }
-
-  // Initialize and inject DOM elements safely
+  // Initialize and inject styles, mount event handlers
   function initChatbot() {
-    console.log("[CreatorlyAI Chatbot] Initializing chatbot DOM components...");
-    if (document.getElementById('creatorlyChatTrigger')) {
-      console.log("[CreatorlyAI Chatbot] Chatbot trigger already exists. Skipping init.");
-      return; // Avoid double init
-    }
-
-    const body = document.body;
-    const head = document.head;
-    if (!body || !head) {
-      console.warn("[CreatorlyAI Chatbot] document.body or document.head is missing!");
-      return;
-    }
-
-    // Inject Custom Styles
-    const styleEl = document.createElement('style');
-    styleEl.textContent = cssStyles;
-    head.appendChild(styleEl);
-
-    // Create & Inject Floating Button + Panel
-    triggerBtn = document.createElement('button');
-    triggerBtn.className = 'creatorly-chat-trigger animate-pulse';
-    triggerBtn.id = 'creatorlyChatTrigger';
-    triggerBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>Ask CreatorlyAI</span>
-    `;
-    body.appendChild(triggerBtn);
-
-    chatPanel = document.createElement('div');
-    chatPanel.className = 'creatorly-chat-panel';
-    chatPanel.id = 'creatorlyChatPanel';
-    chatPanel.innerHTML = `
-      <!-- Drag Handle (Mobile) -->
-      <div class="creatorly-chat-drag-handle" id="creatorlyChatDragHandle"></div>
-      
-      <!-- Header -->
-      <div class="creatorly-chat-header">
-        <div class="creatorly-chat-title-group">
-          <div class="creatorly-chat-avatar">🤖</div>
-          <div class="creatorly-chat-header-text">
-            <h4>CreatorlyAI Strategist</h4>
-            <span>Instagram Growth Advisor</span>
-          </div>
-        </div>
-        <div class="creatorly-chat-header-actions">
-          <button class="creatorly-chat-btn-clear" id="creatorlyChatClearBtn">Clear Chat</button>
-          <button class="creatorly-chat-btn-close" id="creatorlyChatCloseBtn" aria-label="Close">✕</button>
-        </div>
-      </div>
-
-      <!-- Messages Area -->
-      <div class="creatorly-chat-messages-container" id="creatorlyChatMessages"></div>
-
-      <!-- Input Area -->
-      <div class="creatorly-chat-input-area">
-        <form class="creatorly-chat-input-form" id="creatorlyChatForm">
-          <input type="text" class="creatorly-chat-input" id="creatorlyChatInput" placeholder="Ask about hooks, rates, captions..." autocomplete="off" />
-          <button type="submit" class="creatorly-chat-btn-send" id="creatorlyChatSendBtn" disabled>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
-        </form>
-      </div>
-    `;
-    body.appendChild(chatPanel);
-    console.log("[CreatorlyAI Chatbot] Chatbot DOM components appended to body successfully!");
-
+    console.log("[CreatorlyAI Chatbot] Initializing chatbot...");
+    
     messagesContainer = document.getElementById('creatorlyChatMessages');
     chatForm = document.getElementById('creatorlyChatForm');
     chatInput = document.getElementById('creatorlyChatInput');
     chatSendBtn = document.getElementById('creatorlyChatSendBtn');
     chatClearBtn = document.getElementById('creatorlyChatClearBtn');
-    chatCloseBtn = document.getElementById('creatorlyChatCloseBtn');
-    dragHandle = document.getElementById('creatorlyChatDragHandle');
+
+    if (!messagesContainer || !chatForm || !chatInput || !chatSendBtn) {
+      console.error("[CreatorlyAI Chatbot] Required DOM elements not found!");
+      return;
+    }
+
+    // Inject styles
+    const head = document.head;
+    if (head) {
+      const styleEl = document.createElement('style');
+      styleEl.textContent = cssStyles;
+      head.appendChild(styleEl);
+    }
 
     // Input state observer
     chatInput.addEventListener('input', () => {
       chatSendBtn.disabled = !chatInput.value.trim();
     });
 
-    triggerBtn.addEventListener('click', () => togglePanel(true));
-    chatCloseBtn.addEventListener('click', () => togglePanel(false));
-
-    // Minimize on click outside the panel
-    document.addEventListener('click', (e) => {
-      if (state.isExpanded && 
-          !chatPanel.contains(e.target) && 
-          !triggerBtn.contains(e.target) &&
-          !e.target.closest('#askAiErBtn') &&
-          !e.target.closest('#askAiRateBtn') &&
-          !e.target.closest('.ask-ai-trigger-btn')) {
-        togglePanel(false);
-      }
-    });
-
-    // Mobile Bottom Sheet Drag Gestures
-    dragHandle.addEventListener('pointerdown', (e) => {
-      dragStartY = e.clientY;
-      dragStartHeight = chatPanel.getBoundingClientRect().height;
-      isDragging = true;
-      chatPanel.style.transition = 'none';
-      chatPanel.setPointerCapture(e.pointerId);
-    });
-
-    dragHandle.addEventListener('pointermove', (e) => {
-      if (!isDragging) return;
-      const deltaY = e.clientY - dragStartY;
-      const newHeight = dragStartHeight - deltaY;
-      const viewportHeight = window.innerHeight;
-      const minHeight = viewportHeight * 0.25;
-      const maxHeight = viewportHeight * 0.95;
-
-      if (newHeight >= minHeight && newHeight <= maxHeight) {
-        chatPanel.style.height = `${newHeight}px`;
-      }
-    });
-
-    dragHandle.addEventListener('pointerup', (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      chatPanel.style.transition = '';
-      chatPanel.releasePointerCapture(e.pointerId);
-
-      const currentHeight = chatPanel.getBoundingClientRect().height;
-      const viewportHeight = window.innerHeight;
-
-      if (currentHeight > viewportHeight * 0.75) {
-        chatPanel.style.height = '95vh';
-      } else if (currentHeight < viewportHeight * 0.35) {
-        togglePanel(false);
-      } else {
-        chatPanel.style.height = '50vh';
-      }
-    });
-
     // Wiping Chat history
-    chatClearBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear your strategy chat history?')) {
-        state.messages = [];
-        storage.removeItem('creatorly_chatbot_history');
-        showFirstTimeGreeting();
-      }
-    });
+    if (chatClearBtn) {
+      chatClearBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear your strategy chat history?')) {
+          state.messages = [];
+          storage.removeItem('creatorly_chatbot_history');
+          showFirstTimeGreeting();
+        }
+      });
+    }
 
     // Form submit listener
     chatForm.addEventListener('submit', (e) => {
@@ -668,16 +286,26 @@
 
       sendPromptMessage(prompt);
     });
-  }
 
-  // Load handler to wait for document body
-  console.log("[CreatorlyAI Chatbot] Current document readystate:", document.readyState);
-  if (document.readyState === 'loading') {
-    console.log("[CreatorlyAI Chatbot] Document is loading, waiting for DOMContentLoaded event...");
-    document.addEventListener('DOMContentLoaded', initChatbot);
-  } else {
-    console.log("[CreatorlyAI Chatbot] Document is already interactive/complete. Initializing immediately...");
-    initChatbot();
+    // Initial render
+    if (state.messages.length === 0) {
+      showFirstTimeGreeting();
+    } else {
+      renderAllMessages();
+    }
+
+    // Focus input
+    setTimeout(() => chatInput.focus(), 300);
+
+    // Check for incoming query parameter prompts
+    const urlParams = new URLSearchParams(window.location.search);
+    const incomingPrompt = urlParams.get('prompt');
+    if (incomingPrompt) {
+      console.log("[CreatorlyAI Chatbot] Executing incoming query prompt:", incomingPrompt);
+      // Clean query string from browser URL to prevent resubmit on refresh
+      history.replaceState(null, '', window.location.pathname);
+      sendPromptMessage(incomingPrompt);
+    }
   }
 
   // Calculate weakest metric and return targeted suggested prompt chips
@@ -783,7 +411,6 @@
 
   // Append a visual message bubble to UI
   function appendMessageBubble(role, content, isStreaming = false) {
-    // If it's a first time open and we're showing the greeting block, clear it
     if (messagesContainer.querySelector('.creatorly-chat-greeting')) {
       messagesContainer.innerHTML = '';
     }
@@ -805,7 +432,6 @@
       bubble.innerHTML = formatMarkdown(content) + '<span class="creatorly-streaming-cursor"></span>';
     } else {
       bubble.innerHTML = formatMarkdown(content);
-      // Append inline visual cards if keywords exist
       appendInlineCards(bubble, content);
     }
 
@@ -819,7 +445,6 @@
   // Parse basic bold markdown elements
   function formatMarkdown(text) {
     if (!text) return '';
-    // Replace markdown bold **text** with HTML bold
     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   }
 
@@ -906,7 +531,6 @@
 
   // Quick reply chip suggestions
   function renderQuickReplies(lastMessageText) {
-    // Remove any previous quick replies container
     const oldContainer = document.querySelector('.creatorly-chat-quickreplies');
     if (oldContainer) oldContainer.remove();
 
@@ -940,7 +564,6 @@
 
   // Trigger submission of a prompt choice
   function sendPromptMessage(promptText) {
-    // Remove dynamic replies UI
     const repliesRow = document.querySelector('.creatorly-chat-quickreplies');
     if (repliesRow) repliesRow.remove();
 
@@ -951,8 +574,6 @@
     streamAIResponse();
   }
 
-
-
   // Call the Streaming endpoint and read chunks word-by-word
   async function streamAIResponse() {
     const profile = getCreatorProfile();
@@ -961,7 +582,6 @@
       creatorProfile: profile
     };
 
-    // Prepare container for model reply
     const streamBubble = appendMessageBubble('assistant', '', true);
     let fullResponse = '';
 
@@ -988,35 +608,31 @@
         const textChunk = decoder.decode(value, { stream: true });
         fullResponse += textChunk;
         
-        // Update stream bubble HTML using formatted text and scroll
         streamBubble.innerHTML = formatMarkdown(fullResponse) + '<span class="creatorly-streaming-cursor"></span>';
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
 
-      // Finish streaming layout
       streamBubble.innerHTML = formatMarkdown(fullResponse);
       appendInlineCards(streamBubble, fullResponse);
       
-      // Save message in state & storage
       state.messages.push({ role: 'assistant', content: fullResponse });
       localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
 
-      // Append quick replies
       renderQuickReplies(fullResponse);
 
     } catch (err) {
       console.error('Chatbot SSE stream error:', err);
-      const errMsg = `I'm having trouble connecting to my strategy brain right now. Please make sure my server key is configured, or try again in a bit. Next action: retry asking or inspect server connections.`;
+      const errMsg = `I'm having trouble connecting to my strategy brain right now. Please make sure my server key is configured, or try again in a bit.`;
       streamBubble.innerHTML = errMsg;
       state.messages.push({ role: 'assistant', content: errMsg });
       localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
     }
   }
 
-  // Global window helper function for opening the chat pre-loaded with message
-  window.openCreatorlyChat = function (message) {
-    togglePanel(true);
-    sendPromptMessage(message);
-  };
-
+  // Load handler
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatbot);
+  } else {
+    initChatbot();
+  }
 })();

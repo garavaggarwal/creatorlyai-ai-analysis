@@ -226,3 +226,9 @@ function getUserInitial(user) {
     scheduleAutoRefresh(); // reschedule after refresh
   }, refreshIn);
 })();
+
+/* ── Redirect to Chatbot Page helper ── */
+window.openCreatorlyChat = function (message) {
+  window.location.href = '/prompt-generator?prompt=' + encodeURIComponent(message);
+};
+
