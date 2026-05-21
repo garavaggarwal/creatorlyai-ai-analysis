@@ -1204,5 +1204,5 @@ app.listen(PORT, () => {
   console.log(`   Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Set' : '❌ MISSING'}`);
 });
 
-// Trigger deployment
+// Trigger redeployment
 
