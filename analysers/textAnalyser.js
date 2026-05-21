@@ -35,8 +35,6 @@ async function analyseText({ caption, hashtags, niche }) {
   const hasCTA = /\b(comment|share|save|follow|link in bio|click|dm|check|tag|tell me|what do you|let me know|drop a)\b/i.test(caption || '');
   const hasQuestion = /\?/.test(caption || '');
 
-  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
-
   const prompt = `You are an Instagram content strategist. Analyse this caption and hashtags for an Instagram Reel in the "${niche}" niche.
 
 CAPTION:
@@ -86,8 +84,35 @@ Return ONLY valid JSON in this exact structure:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const textModels = [
+      process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+    ].filter((v, i, a) => a.indexOf(v) === i);
+
+    let text = '';
+    let analysisSuccess = false;
+    let lastError = null;
+
+    for (const modelName of textModels) {
+      try {
+        console.log(`   -> Trying text model: ${modelName}`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        text = result.response.text();
+        analysisSuccess = true;
+        break;
+      } catch (err) {
+        console.warn(`   -> Text model ${modelName} failed:`, err.message);
+        lastError = err;
+      }
+    }
+
+    if (!analysisSuccess) {
+      throw new Error(`All text models failed. Last error: ${lastError?.message || 'Unknown'}`);
+    }
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No JSON in text response');
     const parsed = JSON.parse(jsonMatch[0]);

@@ -1451,7 +1451,6 @@ app.post('/api/generate-prompts', express.json(), async (req, res) => {
   try {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-preview-05-20' });
 
     const toolContext = tool !== 'General'
       ? `The prompts MUST be optimized for ${tool}'s specific syntax, capabilities, and best practices. Include tool-specific keywords and formatting that work best with ${tool}.`
@@ -1475,8 +1474,34 @@ Generate exactly 5 detailed, ready-to-paste video generation prompts. Each promp
 Return ONLY a JSON array of 5 strings. No markdown, no explanation, just the JSON array.
 Example format: ["prompt 1 text here", "prompt 2 text here", ...]`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const promptModels = [
+      process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+    ].filter((v, i, a) => a.indexOf(v) === i);
+
+    let text = '';
+    let promptSuccess = false;
+    let lastError = null;
+
+    for (const modelName of promptModels) {
+      try {
+        console.log(`[Prompts] Trying model: ${modelName}`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        text = result.response.text();
+        promptSuccess = true;
+        break;
+      } catch (err) {
+        console.warn(`[Prompts] Model ${modelName} failed, trying next:`, err.message);
+        lastError = err;
+      }
+    }
+
+    if (!promptSuccess) {
+      throw new Error(`All prompt generation models failed. Last error: ${lastError?.message || 'Unknown'}`);
+    }
 
     // Parse JSON from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -1559,11 +1584,6 @@ Rules:
 - If data is unavailable for a question, answer from general creator knowledge but flag that it is based on general benchmarks not their data
 - Never use bullet points in responses. Write in short flowing sentences like a real person texting advice`;
 
-    const model = genAI.getGenerativeModel({ 
-      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-      systemInstruction
-    });
-
     const contents = [];
     if (messages && Array.isArray(messages)) {
       messages.forEach(m => {
@@ -1574,16 +1594,63 @@ Rules:
       });
     }
 
+    const chatbotModels = [
+      process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+    ].filter((v, i, a) => a.indexOf(v) === i);
+
+    let streamSuccess = false;
+    let lastError = null;
+    let resultStream = null;
+    let streamIterator = null;
+    let firstChunk = null;
+
+    for (const modelName of chatbotModels) {
+      try {
+        console.log(`[Chatbot] Trying model: ${modelName}`);
+        const model = genAI.getGenerativeModel({ 
+          model: modelName,
+          systemInstruction
+        });
+        resultStream = await model.generateContentStream({ contents });
+        streamIterator = resultStream.stream[Symbol.asyncIterator]();
+        
+        // Try to fetch first chunk to verify model availability
+        const firstResult = await streamIterator.next();
+        if (!firstResult.done) {
+          firstChunk = firstResult.value;
+        }
+        streamSuccess = true;
+        break;
+      } catch (err) {
+        console.warn(`[Chatbot] Model ${modelName} failed, trying next:`, err.message);
+        lastError = err;
+      }
+    }
+
+    if (!streamSuccess) {
+      throw new Error(`All Gemini models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+    }
+
     // Set headers for SSE streaming
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders && res.flushHeaders();
 
-    const resultStream = await model.generateContentStream({ contents });
+    // Write first chunk
+    if (firstChunk) {
+      const chunkText = firstChunk.text();
+      res.write(chunkText);
+    }
 
-    for await (const chunk of resultStream.stream) {
-      const chunkText = chunk.text();
+    // Stream remaining chunks
+    while (true) {
+      const nextResult = await streamIterator.next();
+      if (nextResult.done) break;
+      const chunkText = nextResult.value.text();
       res.write(chunkText);
     }
     res.end();
