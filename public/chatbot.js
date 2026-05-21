@@ -424,93 +424,71 @@
     }
   `;
 
-  // Inject Custom Styles
-  const styleEl = document.createElement('style');
-  styleEl.textContent = cssStyles;
-  document.head.appendChild(styleEl);
+  // Declaring elements in IIFE scope
+  let triggerBtn, chatPanel, messagesContainer, chatForm, chatInput, chatSendBtn, chatClearBtn, chatCloseBtn, dragHandle;
+  let isDragging = false;
+  let dragStartY = 0;
+  let dragStartHeight = 0;
+
+  // Safe storage utility to prevent crashes in private mode or if storage is blocked
+  const storage = {
+    getItem(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        console.warn('Storage read blocked/failed:', e);
+        return null;
+      }
+    },
+    setItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn('Storage write blocked/failed:', e);
+      }
+    },
+    removeItem(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn('Storage remove blocked/failed:', e);
+      }
+    }
+  };
+
+  // Safe parse function
+  function safeParseHistory() {
+    try {
+      const val = storage.getItem('creatorly_chatbot_history');
+      if (val) {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse chatbot history:', e);
+    }
+    return [];
+  }
 
   // Initialize Chatbot global state
   const state = {
     isExpanded: false,
-    messages: JSON.parse(localStorage.getItem('creatorly_chatbot_history')) || [],
+    messages: safeParseHistory(),
   };
 
   // Helper: Get cached creator profile
   function getCreatorProfile() {
     try {
-      const data = localStorage.getItem('creatorly_last_profile');
+      const data = storage.getItem('creatorly_last_profile');
       return data ? JSON.parse(data) : null;
     } catch (_) {
       return null;
     }
   }
 
-  // Create & Inject Floating Button + Panel
-  const triggerBtn = document.createElement('button');
-  triggerBtn.className = 'creatorly-chat-trigger animate-pulse';
-  triggerBtn.id = 'creatorlyChatTrigger';
-  triggerBtn.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    </svg>
-    <span>Ask CreatorlyAI</span>
-  `;
-  document.body.appendChild(triggerBtn);
-
-  const chatPanel = document.createElement('div');
-  chatPanel.className = 'creatorly-chat-panel';
-  chatPanel.id = 'creatorlyChatPanel';
-  chatPanel.innerHTML = `
-    <!-- Drag Handle (Mobile) -->
-    <div class="creatorly-chat-drag-handle" id="creatorlyChatDragHandle"></div>
-    
-    <!-- Header -->
-    <div class="creatorly-chat-header">
-      <div class="creatorly-chat-title-group">
-        <div class="creatorly-chat-avatar">🤖</div>
-        <div class="creatorly-chat-header-text">
-          <h4>CreatorlyAI Strategist</h4>
-          <span>Instagram Growth Advisor</span>
-        </div>
-      </div>
-      <div class="creatorly-chat-header-actions">
-        <button class="creatorly-chat-btn-clear" id="creatorlyChatClearBtn">Clear Chat</button>
-        <button class="creatorly-chat-btn-close" id="creatorlyChatCloseBtn" aria-label="Close">✕</button>
-      </div>
-    </div>
-
-    <!-- Messages Area -->
-    <div class="creatorly-chat-messages-container" id="creatorlyChatMessages"></div>
-
-    <!-- Input Area -->
-    <div class="creatorly-chat-input-area">
-      <form class="creatorly-chat-input-form" id="creatorlyChatForm">
-        <input type="text" class="creatorly-chat-input" id="creatorlyChatInput" placeholder="Ask about hooks, rates, captions..." autocomplete="off" />
-        <button type="submit" class="creatorly-chat-btn-send" id="creatorlyChatSendBtn" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(chatPanel);
-
-  const messagesContainer = document.getElementById('creatorlyChatMessages');
-  const chatForm = document.getElementById('creatorlyChatForm');
-  const chatInput = document.getElementById('creatorlyChatInput');
-  const chatSendBtn = document.getElementById('creatorlyChatSendBtn');
-  const chatClearBtn = document.getElementById('creatorlyChatClearBtn');
-  const chatCloseBtn = document.getElementById('creatorlyChatCloseBtn');
-  const dragHandle = document.getElementById('creatorlyChatDragHandle');
-
-  // Input state observer
-  chatInput.addEventListener('input', () => {
-    chatSendBtn.disabled = !chatInput.value.trim();
-  });
-
   // Toggle Minimize/Expand handlers
   function togglePanel(open = null) {
+    if (!chatPanel || !triggerBtn || !chatInput) return;
     const shouldOpen = open !== null ? open : !state.isExpanded;
     state.isExpanded = shouldOpen;
     
@@ -526,80 +504,170 @@
     } else {
       chatPanel.classList.remove('expanded');
       triggerBtn.classList.remove('hidden');
-      // Reset height custom styling from mobile drag sheet gesture
       chatPanel.style.height = '';
     }
   }
 
-  triggerBtn.addEventListener('click', () => togglePanel(true));
-  chatCloseBtn.addEventListener('click', () => togglePanel(false));
+  // Initialize and inject DOM elements safely
+  function initChatbot() {
+    if (document.getElementById('creatorlyChatTrigger')) return; // Avoid double init
 
-  // Minimize on click outside the panel
-  document.addEventListener('click', (e) => {
-    if (state.isExpanded && 
-        !chatPanel.contains(e.target) && 
-        !triggerBtn.contains(e.target) &&
-        !e.target.closest('#askAiErBtn') &&
-        !e.target.closest('#askAiRateBtn') &&
-        !e.target.closest('.ask-ai-trigger-btn')) {
-      togglePanel(false);
-    }
-  });
+    const body = document.body;
+    const head = document.head;
+    if (!body || !head) return;
 
-  // Mobile Bottom Sheet Drag Gestures
-  let dragStartY = 0;
-  let dragStartHeight = 0;
-  let isDragging = false;
+    // Inject Custom Styles
+    const styleEl = document.createElement('style');
+    styleEl.textContent = cssStyles;
+    head.appendChild(styleEl);
 
-  dragHandle.addEventListener('pointerdown', (e) => {
-    dragStartY = e.clientY;
-    dragStartHeight = chatPanel.getBoundingClientRect().height;
-    isDragging = true;
-    chatPanel.style.transition = 'none'; // Disable transition during drag
-    chatPanel.setPointerCapture(e.pointerId);
-  });
+    // Create & Inject Floating Button + Panel
+    triggerBtn = document.createElement('button');
+    triggerBtn.className = 'creatorly-chat-trigger animate-pulse';
+    triggerBtn.id = 'creatorlyChatTrigger';
+    triggerBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Ask CreatorlyAI</span>
+    `;
+    body.appendChild(triggerBtn);
 
-  dragHandle.addEventListener('pointermove', (e) => {
-    if (!isDragging) return;
-    const deltaY = e.clientY - dragStartY;
-    const newHeight = dragStartHeight - deltaY;
-    const viewportHeight = window.innerHeight;
-    const minHeight = viewportHeight * 0.25;
-    const maxHeight = viewportHeight * 0.95;
+    chatPanel = document.createElement('div');
+    chatPanel.className = 'creatorly-chat-panel';
+    chatPanel.id = 'creatorlyChatPanel';
+    chatPanel.innerHTML = `
+      <!-- Drag Handle (Mobile) -->
+      <div class="creatorly-chat-drag-handle" id="creatorlyChatDragHandle"></div>
+      
+      <!-- Header -->
+      <div class="creatorly-chat-header">
+        <div class="creatorly-chat-title-group">
+          <div class="creatorly-chat-avatar">🤖</div>
+          <div class="creatorly-chat-header-text">
+            <h4>CreatorlyAI Strategist</h4>
+            <span>Instagram Growth Advisor</span>
+          </div>
+        </div>
+        <div class="creatorly-chat-header-actions">
+          <button class="creatorly-chat-btn-clear" id="creatorlyChatClearBtn">Clear Chat</button>
+          <button class="creatorly-chat-btn-close" id="creatorlyChatCloseBtn" aria-label="Close">✕</button>
+        </div>
+      </div>
 
-    // Apply clamped height inline
-    if (newHeight >= minHeight && newHeight <= maxHeight) {
-      chatPanel.style.height = `${newHeight}px`;
-    }
-  });
+      <!-- Messages Area -->
+      <div class="creatorly-chat-messages-container" id="creatorlyChatMessages"></div>
 
-  dragHandle.addEventListener('pointerup', (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-    chatPanel.style.transition = ''; // Restore transition CSS
-    chatPanel.releasePointerCapture(e.pointerId);
+      <!-- Input Area -->
+      <div class="creatorly-chat-input-area">
+        <form class="creatorly-chat-input-form" id="creatorlyChatForm">
+          <input type="text" class="creatorly-chat-input" id="creatorlyChatInput" placeholder="Ask about hooks, rates, captions..." autocomplete="off" />
+          <button type="submit" class="creatorly-chat-btn-send" id="creatorlyChatSendBtn" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    `;
+    body.appendChild(chatPanel);
 
-    const currentHeight = chatPanel.getBoundingClientRect().height;
-    const viewportHeight = window.innerHeight;
+    messagesContainer = document.getElementById('creatorlyChatMessages');
+    chatForm = document.getElementById('creatorlyChatForm');
+    chatInput = document.getElementById('creatorlyChatInput');
+    chatSendBtn = document.getElementById('creatorlyChatSendBtn');
+    chatClearBtn = document.getElementById('creatorlyChatClearBtn');
+    chatCloseBtn = document.getElementById('creatorlyChatCloseBtn');
+    dragHandle = document.getElementById('creatorlyChatDragHandle');
 
-    // Snapping thresholds
-    if (currentHeight > viewportHeight * 0.75) {
-      chatPanel.style.height = '95vh';
-    } else if (currentHeight < viewportHeight * 0.35) {
-      togglePanel(false);
-    } else {
-      chatPanel.style.height = '50vh';
-    }
-  });
+    // Input state observer
+    chatInput.addEventListener('input', () => {
+      chatSendBtn.disabled = !chatInput.value.trim();
+    });
 
-  // Wiping Chat history
-  chatClearBtn.addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear your strategy chat history?')) {
-      state.messages = [];
-      localStorage.removeItem('creatorly_chatbot_history');
-      showFirstTimeGreeting();
-    }
-  });
+    triggerBtn.addEventListener('click', () => togglePanel(true));
+    chatCloseBtn.addEventListener('click', () => togglePanel(false));
+
+    // Minimize on click outside the panel
+    document.addEventListener('click', (e) => {
+      if (state.isExpanded && 
+          !chatPanel.contains(e.target) && 
+          !triggerBtn.contains(e.target) &&
+          !e.target.closest('#askAiErBtn') &&
+          !e.target.closest('#askAiRateBtn') &&
+          !e.target.closest('.ask-ai-trigger-btn')) {
+        togglePanel(false);
+      }
+    });
+
+    // Mobile Bottom Sheet Drag Gestures
+    dragHandle.addEventListener('pointerdown', (e) => {
+      dragStartY = e.clientY;
+      dragStartHeight = chatPanel.getBoundingClientRect().height;
+      isDragging = true;
+      chatPanel.style.transition = 'none';
+      chatPanel.setPointerCapture(e.pointerId);
+    });
+
+    dragHandle.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const deltaY = e.clientY - dragStartY;
+      const newHeight = dragStartHeight - deltaY;
+      const viewportHeight = window.innerHeight;
+      const minHeight = viewportHeight * 0.25;
+      const maxHeight = viewportHeight * 0.95;
+
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
+        chatPanel.style.height = `${newHeight}px`;
+      }
+    });
+
+    dragHandle.addEventListener('pointerup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      chatPanel.style.transition = '';
+      chatPanel.releasePointerCapture(e.pointerId);
+
+      const currentHeight = chatPanel.getBoundingClientRect().height;
+      const viewportHeight = window.innerHeight;
+
+      if (currentHeight > viewportHeight * 0.75) {
+        chatPanel.style.height = '95vh';
+      } else if (currentHeight < viewportHeight * 0.35) {
+        togglePanel(false);
+      } else {
+        chatPanel.style.height = '50vh';
+      }
+    });
+
+    // Wiping Chat history
+    chatClearBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear your strategy chat history?')) {
+        state.messages = [];
+        storage.removeItem('creatorly_chatbot_history');
+        showFirstTimeGreeting();
+      }
+    });
+
+    // Form submit listener
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const prompt = chatInput.value.trim();
+      if (!prompt) return;
+
+      chatInput.value = '';
+      chatSendBtn.disabled = true;
+
+      sendPromptMessage(prompt);
+    });
+  }
+
+  // Load handler to wait for document body
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatbot);
+  } else {
+    initChatbot();
+  }
 
   // Calculate weakest metric and return targeted suggested prompt chips
   function getWeakestMetricPrompts(p) {
@@ -872,17 +940,7 @@
     streamAIResponse();
   }
 
-  // Submit form handler
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const prompt = chatInput.value.trim();
-    if (!prompt) return;
 
-    chatInput.value = '';
-    chatSendBtn.disabled = true;
-
-    sendPromptMessage(prompt);
-  });
 
   // Call the Streaming endpoint and read chunks word-by-word
   async function streamAIResponse() {
