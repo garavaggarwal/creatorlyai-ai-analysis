@@ -253,10 +253,44 @@ async function getUserUsage(userId) {
   };
 }
 
+// ─── Profile cache helpers ────────────────────────────────────────────────────
+async function getCachedProfile(username) {
+  const path = `/rest/v1/profile_analytics_cache?username=eq.${encodeURIComponent(username.toLowerCase())}`;
+  const { data, error } = await supabaseGet(path);
+  if (error) {
+    console.warn('Failed to fetch cached profile:', error);
+    return null;
+  }
+  return Array.isArray(data) && data.length > 0 ? data[0] : null;
+}
+
+async function saveCachedProfile(username, profileData) {
+  const cleanUsername = username.toLowerCase();
+  const cached = await getCachedProfile(cleanUsername);
+  
+  const record = {
+    username: cleanUsername,
+    profile_data: profileData,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (cached) {
+    const path = `/rest/v1/profile_analytics_cache?username=eq.${encodeURIComponent(cleanUsername)}`;
+    const { error } = await supabasePost(path, { profile_data: profileData, updated_at: new Date().toISOString() }, 'PATCH');
+    if (error) console.warn('Failed to update cached profile:', error);
+  } else {
+    const { error } = await supabasePost('/rest/v1/profile_analytics_cache', record, 'POST');
+    if (error) console.warn('Failed to insert cached profile:', error);
+  }
+}
+
 module.exports = {
   checkUserLimit,
   createAnalysisRecord,
   saveAnalysisResult,
   markAnalysisFailed,
   getUserUsage,
+  getCachedProfile,
+  saveCachedProfile,
 };
+

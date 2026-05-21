@@ -7,7 +7,7 @@ const { execFile, spawnSync } = require('child_process');
 const { runFfmpegAnalysis } = require('./analysers/ffmpegHelper');
 const { analyseWithGemini } = require('./analysers/geminiAnalyser');
 const { analyseText } = require('./analysers/textAnalyser');
-const { checkUserLimit, createAnalysisRecord, saveAnalysisResult, markAnalysisFailed, getUserUsage } = require('./supabaseDb');
+const { checkUserLimit, createAnalysisRecord, saveAnalysisResult, markAnalysisFailed, getUserUsage, getCachedProfile, saveCachedProfile } = require('./supabaseDb');
 
 // ─── Resolve yt-dlp binary path at startup ────────────────────────────────────
 function resolveYtDlpPath() {
@@ -358,6 +358,10 @@ function detectNiche(bioText, posts) {
 }
 
 // ─── Profile Analytics API ────────────────────────────────────────────────────
+// Local memory fallback cache
+const localProfileCache = new Map();
+
+// ─── Profile Analytics API ────────────────────────────────────────────────────
 app.post('/api/profile-analytics', async (req, res) => {
   const { username } = req.body || {};
   if (!username || !username.trim()) {
@@ -369,18 +373,46 @@ app.post('/api/profile-analytics', async (req, res) => {
   }
 
   const userId = extractUserId(req);
+  const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
 
+  // 1. Check Caches (24-Hour Expiration)
   try {
-    const cleanUsername = username.trim().replace(/^@/, '');
-    console.log(`\n📊 Profile analytics request | Username: ${cleanUsername} | User: ${userId || 'anonymous'}`);
+    // Database Cache Check
+    const cachedRecord = await getCachedProfile(cleanUsername);
+    if (cachedRecord && cachedRecord.profile_data) {
+      const lastUpdate = new Date(cachedRecord.updated_at).getTime();
+      const ageHrs = (Date.now() - lastUpdate) / (1000 * 60 * 60);
+      if (ageHrs < 24) {
+        console.log(`⚡ Serving cached DB profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
+        return res.json({ success: true, profile: cachedRecord.profile_data, cached: true });
+      }
+    }
+  } catch (cacheErr) {
+    console.warn('⚠️ Supabase cache check error, falling back to local memory cache:', cacheErr.message);
+  }
+
+  // Memory Cache Fallback Check
+  const localCached = localProfileCache.get(cleanUsername);
+  if (localCached) {
+    const ageHrs = (Date.now() - localCached.timestamp) / (1000 * 60 * 60);
+    if (ageHrs < 24) {
+      console.log(`⚡ Serving cached memory profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
+      return res.json({ success: true, profile: localCached.profile, cached: true });
+    }
+  }
+
+  // 2. No valid cache, fetch fresh data from Apify
+  try {
+    console.log(`\n📊 Scrape requested | Username: ${cleanUsername} | User: ${userId || 'anonymous'}`);
 
     const { ApifyClient } = require('apify-client');
     const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
 
-    // Run the Instagram Profile Scraper actor
+    // Run the Instagram Profile Scraper actor requesting 40 items to make sure we get reels
     const run = await client.actor('apify/instagram-profile-scraper').call(
       {
         usernames: [cleanUsername],
+        resultsLimit: 40,
       },
       {
         timeout: 120,
@@ -401,13 +433,10 @@ app.post('/api/profile-analytics', async (req, res) => {
     const profile = items[0];
     console.log('📋 Profile keys:', Object.keys(profile).join(', '));
 
-    // Extract recent posts/reels for metrics calculation
+    // Extract all posts
     const allPosts = profile.latestPosts || profile.posts || profile.recentPosts || [];
-    if (allPosts.length > 0) {
-      console.log('📋 First post keys:', Object.keys(allPosts[0]).join(', '));
-      console.log('📋 First post type/video fields:', JSON.stringify({ type: allPosts[0].type, videoUrl: !!allPosts[0].videoUrl, isVideo: allPosts[0].isVideo, productType: allPosts[0].productType, videoViewCount: allPosts[0].videoViewCount, playCount: allPosts[0].playCount }));
-    }
-    // Reels have video views/play counts; regular posts don't
+
+    // Filter strictly for Reels (videos)
     const reels = allPosts.filter(p => 
       p.type === 'Video' || p.videoUrl || p.isVideo || 
       p.productType === 'clips' || p.productType === 'reels' ||
@@ -416,47 +445,189 @@ app.post('/api/profile-analytics', async (req, res) => {
       (p.playCount && p.playCount > 0) ||
       (p.views && p.views > 0)
     );
-    const imagePosts = allPosts.filter(p => !reels.includes(p));
-    const last10 = allPosts.slice(0, 10); // Last 10 posts for averages
+
+    const targetReels = reels.slice(0, 15); // Analyse last 15 Reels only
+    console.log(`📹 Reels extracted: ${reels.length} | Target Reels: ${targetReels.length}`);
 
     // Basic counts
     const followersCount = profile.followersCount || profile.followers || profile.follower_count || 0;
     const postsCount = profile.postsCount || profile.posts_count || profile.mediaCount || 0;
 
-    // Extract metrics from last 10 posts
-    const viewCounts = last10.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
-    const likeCounts = last10.map(p => p.likesCount || p.likes || p.like_count || 0);
-    const commentCounts = last10.map(p => p.commentsCount || p.comments || p.comment_count || 0);
-    const shareCounts = last10.map(p => p.sharesCount || p.shares || p.share_count || 0);
-    const saveCounts = last10.map(p => p.savesCount || p.saves || p.save_count || 0);
+    // Calculate metrics across the last 15 reels
+    const viewCounts = targetReels.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
+    const likeCounts = targetReels.map(p => p.likesCount || p.likes || p.like_count || 0);
+    const commentCounts = targetReels.map(p => p.commentsCount || p.comments || p.comment_count || 0);
+    const shareCounts = targetReels.map(p => p.sharesCount || p.shares || p.share_count || 0);
+    const saveCounts = targetReels.map(p => p.savesCount || p.saves || p.save_count || 0);
 
-    const avgViews = viewCounts.length > 0 ? Math.round(viewCounts.reduce((a, b) => a + b, 0) / viewCounts.length) : 0;
-    const avgLikes = likeCounts.length > 0 ? Math.round(likeCounts.reduce((a, b) => a + b, 0) / likeCounts.length) : 0;
-    const avgComments = commentCounts.length > 0 ? Math.round(commentCounts.reduce((a, b) => a + b, 0) / commentCounts.length) : 0;
-    const avgShares = shareCounts.length > 0 ? Math.round(shareCounts.reduce((a, b) => a + b, 0) / shareCounts.length) : 0;
-    const avgSaves = saveCounts.length > 0 ? Math.round(saveCounts.reduce((a, b) => a + b, 0) / saveCounts.length) : 0;
+    const avgViews15 = viewCounts.length > 0 ? Math.round(viewCounts.reduce((a, b) => a + b, 0) / viewCounts.length) : 0;
+    const avgLikes15 = likeCounts.length > 0 ? Math.round(likeCounts.reduce((a, b) => a + b, 0) / likeCounts.length) : 0;
+    const avgComments15 = commentCounts.length > 0 ? Math.round(commentCounts.reduce((a, b) => a + b, 0) / commentCounts.length) : 0;
+    const avgShares15 = shareCounts.length > 0 ? Math.round(shareCounts.reduce((a, b) => a + b, 0) / shareCounts.length) : 0;
+    const avgSaves15 = saveCounts.length > 0 ? Math.round(saveCounts.reduce((a, b) => a + b, 0) / saveCounts.length) : 0;
 
-    // Engagement Rate by Followers (%)
-    const totalEngagement = avgLikes + avgComments + avgShares + avgSaves;
-    const erByFollowers = followersCount > 0 ? Math.min(((totalEngagement) / followersCount * 100), 100).toFixed(2) : '0.00';
+    // 1. Engagement Rate by Viewer (Views)
+    const totalEngagement = avgLikes15 + avgComments15 + avgShares15 + avgSaves15;
+    const erByViews = avgViews15 > 0 ? parseFloat(((totalEngagement) / avgViews15 * 100).toFixed(2)) : 0.00;
 
-    // Engagement Rate by Views (%)
-    const erByViews = avgViews > 0 ? Math.min(((totalEngagement) / avgViews * 100), 100).toFixed(2) : '0.00';
-
-    // Reach Efficiency
-    const reachEfficiency = followersCount > 0 ? (avgViews / followersCount).toFixed(2) : '0.00';
-
-    // Niche detection from bio + captions
+    // 2. Niche detection
     const bioText = (profile.biography || profile.bio || '').toLowerCase();
     const businessCat = profile.businessCategoryName || profile.category || '';
     const niche = businessCat || detectNiche(bioText, allPosts);
 
-    // Views trend (per post, chronological)
-    const viewsTrend = last10.slice().reverse().map(p => ({
-      views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
-      likes: p.likesCount || p.likes || p.like_count || 0,
-      date: p.timestamp || p.taken_at || p.date || null,
-    }));
+    // 3. Niche Benchmark ER by Followers/Views (we compare views ER here)
+    const nicheBenchmarks = {
+      'Fitness': 2.5,
+      'Travel': 3.1,
+      'Food': 2.8,
+      'Tech': 1.8,
+      'Fashion': 2.2,
+      'Beauty': 2.4,
+      'Comedy': 3.5,
+      'Education': 1.9,
+      'Business': 1.7,
+      'Music': 2.6,
+      'Photography': 2.3,
+      'Lifestyle': 2.1,
+      'General': 2.2
+    };
+    const nicheBenchmark = nicheBenchmarks[niche] || 2.2;
+
+    // 4. Posting consistency: reels per week
+    let reelsPerWeek = 0;
+    if (targetReels.length >= 2) {
+      const dates = targetReels.map(r => r.timestamp || r.taken_at || r.date).filter(Boolean).map(d => new Date(d).getTime());
+      if (dates.length >= 2) {
+        const minDate = Math.min(...dates);
+        const maxDate = Math.max(...dates);
+        const daysDiff = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+        const weeks = Math.max(daysDiff / 7, 1);
+        reelsPerWeek = parseFloat((targetReels.length / weeks).toFixed(1));
+      }
+    } else if (targetReels.length === 1) {
+      reelsPerWeek = 1.0;
+    }
+
+    // 5. Best performing reel (highest views)
+    let bestReel = null;
+    if (targetReels.length > 0) {
+      const bestRaw = targetReels.reduce((best, curr) => {
+        const currViews = curr.videoViewCount || curr.video_view_count || curr.playCount || curr.views || 0;
+        const bestViews = best ? (best.videoViewCount || best.video_view_count || best.playCount || best.views || 0) : -1;
+        return currViews > bestViews ? curr : best;
+      }, null);
+      if (bestRaw) {
+        bestReel = {
+          likes: bestRaw.likesCount || bestRaw.likes || bestRaw.like_count || 0,
+          comments: bestRaw.commentsCount || bestRaw.comments || bestRaw.comment_count || 0,
+          views: bestRaw.videoViewCount || bestRaw.video_view_count || bestRaw.playCount || bestRaw.views || 0,
+          date: bestRaw.timestamp || bestRaw.taken_at || bestRaw.date || null,
+          thumbnailUrl: bestRaw.displayUrl || bestRaw.thumbnailUrl || bestRaw.thumbnail_src || bestRaw.imageUrl || bestRaw.display_url || '',
+          postUrl: bestRaw.url || (bestRaw.shortCode ? `https://www.instagram.com/reel/${bestRaw.shortCode}/` : (bestRaw.shortcode ? `https://www.instagram.com/reel/${bestRaw.shortcode}/` : '')),
+          caption: (bestRaw.caption || bestRaw.text || '').slice(0, 100),
+        };
+      }
+    }
+
+    // 6. Views-to-Likes ratio (views per 1 like)
+    const viewsToLikesRatio = avgLikes15 > 0 ? parseFloat((avgViews15 / avgLikes15).toFixed(1)) : 0;
+
+    // 7. Optimal day & time to post based on engagement
+    function calculateBestPostTime(posts) {
+      if (!posts || posts.length === 0) return { day: 'Wednesday', time: '6:00 PM' };
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayScores = {};
+      const hourScores = {};
+      
+      posts.forEach(p => {
+        const dateStr = p.timestamp || p.taken_at || p.date;
+        if (!dateStr) return;
+        const d = new Date(dateStr);
+        const day = days[d.getDay()];
+        const hour = d.getHours();
+        const engagement = (p.likesCount || p.likes || p.like_count || 0) + (p.commentsCount || p.comments || p.comment_count || 0);
+        
+        if (!dayScores[day]) dayScores[day] = { count: 0, score: 0 };
+        dayScores[day].count++;
+        dayScores[day].score += engagement;
+        
+        const hourBin = Math.floor(hour / 3) * 3;
+        if (!hourScores[hourBin]) hourScores[hourBin] = { count: 0, score: 0 };
+        hourScores[hourBin].count++;
+        hourScores[hourBin].score += engagement;
+      });
+      
+      let bestDay = 'Wednesday';
+      let maxDayScore = -1;
+      for (const [day, val] of Object.entries(dayScores)) {
+        const avg = val.score / val.count;
+        if (avg > maxDayScore) {
+          maxDayScore = avg;
+          bestDay = day;
+        }
+      }
+      
+      let bestHourBin = 18;
+      let maxHourScore = -1;
+      for (const [hourBin, val] of Object.entries(hourScores)) {
+        const avg = val.score / val.count;
+        if (avg > maxHourScore) {
+          maxHourScore = avg;
+          bestHourBin = parseInt(hourBin);
+        }
+      }
+      
+      const formatHour = (h) => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const hour12 = h % 12 || 12;
+        return `${hour12}:00 ${ampm}`;
+      };
+      
+      return { day: bestDay, time: formatHour(bestHourBin) };
+    }
+    const optimalTime = calculateBestPostTime(targetReels);
+
+    // 8. Optimal day & time based on niche
+    const nicheOptimalTimes = {
+      'Business': { day: 'Tuesday', time: '10:00 AM' },
+      'Tech': { day: 'Monday', time: '11:00 AM' },
+      'Fitness': { day: 'Wednesday', time: '9:00 AM' },
+      'Travel': { day: 'Friday', time: '12:00 PM' },
+      'Food': { day: 'Friday', time: '6:00 PM' },
+      'Comedy': { day: 'Friday', time: '8:00 PM' },
+      'Fashion': { day: 'Thursday', time: '3:00 PM' },
+      'Beauty': { day: 'Thursday', time: '4:00 PM' },
+      'Music': { day: 'Saturday', time: '7:00 PM' },
+      'Education': { day: 'Wednesday', time: '10:00 AM' },
+      'Photography': { day: 'Wednesday', time: '2:00 PM' },
+      'Lifestyle': { day: 'Sunday', time: '5:00 PM' },
+      'General': { day: 'Wednesday', time: '3:00 PM' }
+    };
+    const industryBenchmarkTime = nicheOptimalTimes[niche] || nicheOptimalTimes['General'];
+
+    // 9. Top 3 hashtags driving engagement
+    function extractTopHashtags(posts) {
+      const hashtags = {};
+      posts.forEach(p => {
+        const text = p.caption || p.text || '';
+        const engagement = (p.likesCount || p.likes || p.like_count || 0) + (p.commentsCount || p.comments || p.comment_count || 0);
+        const matches = text.match(/#\w+/g);
+        if (matches) {
+          const uniqueTags = [...new Set(matches.map(t => t.toLowerCase()))];
+          uniqueTags.forEach(tag => {
+            if (!hashtags[tag]) hashtags[tag] = { count: 0, engagement: 0 };
+            hashtags[tag].count++;
+            hashtags[tag].engagement += engagement;
+          });
+        }
+      });
+      
+      return Object.entries(hashtags)
+        .map(([tag, val]) => ({ tag, avgEngagement: Math.round(val.engagement / val.count), count: val.count }))
+        .sort((a, b) => b.avgEngagement - a.avgEngagement)
+        .slice(0, 3);
+    }
+    const topHashtags = extractTopHashtags(targetReels);
 
     const result = {
       username: profile.username || cleanUsername,
@@ -467,37 +638,34 @@ app.post('/api/profile-analytics', async (req, res) => {
       isBusinessAccount: profile.isBusinessAccount || profile.is_business || false,
       businessCategory: businessCat,
       niche,
+      nicheBenchmark,
       externalUrl: profile.externalUrl || profile.external_url || '',
 
-      // Key metrics
+      // Key metrics (Strictly reels analytics)
       followersCount,
       postsCount,
-      avgViews,
-      avgLikes,
-      avgComments,
-      avgShares,
-      avgSaves,
-      erByFollowers: parseFloat(erByFollowers),
-      erByViews: parseFloat(erByViews),
-      reachEfficiency: parseFloat(reachEfficiency),
-      viewsTrend,
+      avgViews: avgViews15,
+      avgLikes: avgLikes15,
+      avgComments: avgComments15,
+      avgShares: avgShares15,
+      avgSaves: avgSaves15,
+      erByViews,
+      viewsToLikesRatio,
+      reelsPerWeek,
+      bestReel,
+      optimalTime,
+      industryBenchmarkTime,
+      topHashtags,
 
-      // Raw post data for frontend (images/carousels only)
-      recentPosts: imagePosts.slice(0, 10).map(p => ({
-        caption: (p.caption || p.text || '').slice(0, 100),
-        likes: p.likesCount || p.likes || p.like_count || 0,
-        comments: p.commentsCount || p.comments || p.comment_count || 0,
+      // Chronological view/likes trend for the last 15 reels
+      viewsTrend: targetReels.slice().reverse().map(p => ({
         views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
-        shares: p.sharesCount || p.shares || p.share_count || 0,
-        saves: p.savesCount || p.saves || p.save_count || 0,
+        likes: p.likesCount || p.likes || p.like_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,
-        type: 'Image',
-        thumbnailUrl: p.displayUrl || p.thumbnailUrl || p.thumbnail_src || p.imageUrl || p.display_url || '',
-        postUrl: p.url || (p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : (p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '')),
       })),
 
-      // Reels data for frontend (videos only)
-      recentReels: reels.slice(0, 10).map(p => ({
+      // Return analyzed reels for the reels grid
+      recentReels: targetReels.map(p => ({
         caption: (p.caption || p.text || '').slice(0, 100),
         likes: p.likesCount || p.likes || p.like_count || 0,
         comments: p.commentsCount || p.comments || p.comment_count || 0,
@@ -511,7 +679,19 @@ app.post('/api/profile-analytics', async (req, res) => {
       })),
     };
 
-    console.log(`✅ Profile analytics done for @${cleanUsername}. Followers: ${followersCount}, ER: ${erByFollowers}%`);
+    // Save caches (Database and memory)
+    try {
+      await saveCachedProfile(cleanUsername, result);
+    } catch (saveCacheErr) {
+      console.warn('⚠️ Failed to save to database cache:', saveCacheErr.message);
+    }
+
+    localProfileCache.set(cleanUsername, {
+      timestamp: Date.now(),
+      profile: result,
+    });
+
+    console.log(`✅ Profile analytics done for @${cleanUsername}. Followers: ${followersCount}, ER by Views: ${erByViews}%`);
     res.json({ success: true, profile: result });
 
   } catch (err) {

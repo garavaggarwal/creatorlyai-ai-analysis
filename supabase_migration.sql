@@ -85,3 +85,20 @@ create policy "Users can view own analyses"
 
 -- Only the service role (backend) can insert/update — frontend never writes directly
 -- (No insert/update policy for authenticated role — backend uses service_role key)
+
+
+-- ── Profile Analytics Cache ───────────────────────────────────────────────────
+create table if not exists public.profile_analytics_cache (
+  username            text primary key,
+  profile_data        jsonb not null,
+  updated_at          timestamptz not null default now()
+);
+
+-- Access policies for profile_analytics_cache
+alter table public.profile_analytics_cache enable row level security;
+
+-- Only service role (backend) can write, public can read
+create policy "Anyone can read cached profiles"
+  on public.profile_analytics_cache for select
+  using (true);
+

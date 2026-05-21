@@ -138,24 +138,100 @@
         <div class="profile-stats-row" id="profileStatsRow"></div>
       </div>
 
+      <!-- Advanced Insights Section (Consistency + ER vs Benchmark + Ratio) -->
+      <div class="insights-row-grid">
+        <div class="card insight-sub-card">
+          <div class="insight-label-row">
+            <span class="insight-mini-title">Engagement by Viewer</span>
+            <span id="erBadge" class="badge">--</span>
+          </div>
+          <div class="insight-value-large" id="erValue">0.0%</div>
+          <div class="insight-comparison-desc" id="erComparison">Benchmark niche avg: --%</div>
+        </div>
+
+        <div class="card insight-sub-card">
+          <div class="insight-label-row">
+            <span class="insight-mini-title">Posting Consistency</span>
+            <span id="consistencyBadge" class="badge">--</span>
+          </div>
+          <div class="insight-value-large" id="consistencyValue">0.0/wk</div>
+          <div class="insight-comparison-desc" id="consistencyComparison">Reels posted per week</div>
+        </div>
+
+        <div class="card insight-sub-card">
+          <div class="insight-label-row">
+            <span class="insight-mini-title">Views-to-Likes Ratio</span>
+            <span id="ratioBadge" class="badge">--</span>
+          </div>
+          <div class="insight-value-large" id="ratioValue">1 in --</div>
+          <div class="insight-comparison-desc" id="ratioComparison">Views required per Like</div>
+        </div>
+      </div>
+
+      <!-- Performance Averages -->
       <div class="card metrics-card">
-        <h3 class="card-title">Key Metrics</h3>
-        <div class="metrics-grid" id="metricsGrid"></div>
+        <h3 class="card-title">Performance Averages (Last 15 Reels)</h3>
+        <div class="metrics-grid" id="metricsGrid">
+          <div class="metric-item">
+            <div class="metric-value" id="avgViewsVal">0</div>
+            <div class="metric-label">Avg Views</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" id="avgLikesVal">0</div>
+            <div class="metric-label">Avg Likes</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" id="avgCommentsVal">0</div>
+            <div class="metric-label">Avg Comments</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Best Performing Reel -->
+      <div class="card best-reel-card">
+        <h3 class="card-title">🔥 Best Performing Reel</h3>
+        <div id="bestReelContainer" class="best-reel-layout">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Posting Schedule Assistant -->
+      <div class="card scheduler-card">
+        <h3 class="card-title">📅 Best Times to Post Reels</h3>
+        <div class="scheduler-grid">
+          <div class="scheduler-item data-driven">
+            <div class="scheduler-icon">🎯</div>
+            <div class="scheduler-info">
+              <span class="scheduler-label">Based on Your Reels Data</span>
+              <div class="scheduler-value" id="bestPostTimeAudience">--</div>
+            </div>
+          </div>
+          <div class="scheduler-item industry-bench">
+            <div class="scheduler-icon">💡</div>
+            <div class="scheduler-info">
+              <span class="scheduler-label">Niche Industry Benchmark</span>
+              <div class="scheduler-value" id="bestPostTimeIndustry">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hashtags Cloud -->
+      <div class="card hashtags-card">
+        <h3 class="card-title">#️⃣ Top Engagement Hashtags</h3>
+        <div class="hashtags-cloud" id="topHashtagsCloud">
+          <!-- Populated by JS -->
+        </div>
       </div>
 
       <div class="card chart-card">
-        <h3 class="card-title">Views & Engagement Trend</h3>
+        <h3 class="card-title">Views Trend</h3>
         <div class="chart-wrap" id="chartWrap"></div>
       </div>
 
       <div class="card posts-card">
-        <h3 class="card-title">Recent Reels</h3>
+        <h3 class="card-title">Analyzed Reels</h3>
         <div class="posts-grid" id="reelsGrid"></div>
-      </div>
-
-      <div class="card posts-card">
-        <h3 class="card-title">Recent Posts</h3>
-        <div class="posts-grid" id="postsGrid"></div>
       </div>
     </div>
 

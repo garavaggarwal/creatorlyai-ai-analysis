@@ -164,7 +164,58 @@ function renderProfile(p) {
     `<span class="profile-tag">${t}</span>`
   ).join('');
 
-  // Stats row (Followers + Posts only, no Following)
+  // ── Growth Signal calculation ──
+  const getGrowthSignal = (username, currentFollowers) => {
+    const key = `creatorly_snapshot_${username.toLowerCase()}`;
+    const stored = localStorage.getItem(key);
+    const now = Date.now();
+    let growthText = '';
+    let growthClass = 'neutral';
+
+    if (stored) {
+      try {
+        const history = JSON.parse(stored);
+        if (Array.isArray(history) && history.length > 0) {
+          const lastScan = history[history.length - 1];
+          const diff = currentFollowers - lastScan.followers;
+          const days = Math.max(1, Math.round((now - lastScan.timestamp) / (1000 * 60 * 60 * 24)));
+          
+          if (diff > 0) {
+            const pct = ((diff / lastScan.followers) * 100).toFixed(1);
+            growthText = `📈 +${formatNum(diff)} followers (+${pct}%) in last ${days}d`;
+            growthClass = 'positive';
+          } else if (diff < 0) {
+            const pct = (Math.abs(diff / lastScan.followers) * 100).toFixed(1);
+            growthText = `📉 -${formatNum(Math.abs(diff))} followers (-${pct}%) in last ${days}d`;
+            growthClass = 'negative';
+          } else {
+            growthText = `📊 Stagnant (no change in last ${days}d)`;
+            growthClass = 'neutral';
+          }
+
+          const lastScanDate = new Date(lastScan.timestamp).toDateString();
+          const todayDate = new Date(now).toDateString();
+          if (lastScanDate !== todayDate || lastScan.followers !== currentFollowers) {
+            history.push({ timestamp: now, followers: currentFollowers });
+            if (history.length > 5) history.shift();
+            localStorage.setItem(key, JSON.stringify(history));
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing growth snapshot:', e);
+      }
+    } else {
+      const history = [{ timestamp: now, followers: currentFollowers }];
+      localStorage.setItem(key, JSON.stringify(history));
+      growthText = `🌱 Baseline set (Growth will show on next scan)`;
+      growthClass = 'neutral';
+    }
+    return { growthText, growthClass };
+  };
+
+  const growth = getGrowthSignal(p.username, p.followersCount);
+
+  // Stats row (Followers + Posts + Growth Signal status tag)
   document.getElementById('profileStatsRow').innerHTML = `
     <div class="profile-stat">
       <div class="profile-stat-value">${formatNum(p.followersCount)}</div>
@@ -174,81 +225,88 @@ function renderProfile(p) {
       <div class="profile-stat-value">${formatNum(p.postsCount)}</div>
       <div class="profile-stat-label">Total Posts</div>
     </div>
-  `;
-
-  // Key Metrics — 8 exact metrics
-  const erFollowersClass = p.erByFollowers >= 3 ? 'high' : p.erByFollowers >= 1 ? 'mid' : 'low';
-  const erViewsClass = p.erByViews >= 10 ? 'high' : p.erByViews >= 5 ? 'mid' : 'low';
-  const reachClass = p.reachEfficiency >= 1 ? 'high' : p.reachEfficiency >= 0.3 ? 'mid' : 'low';
-
-  document.getElementById('metricsGrid').innerHTML = `
-    <div class="metric-item">
-      <div class="metric-value">${formatNum(p.avgViews)}</div>
-      <div class="metric-label">Avg Reel Views</div>
-      <div class="metric-desc">Last 10 reels avg reach</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value">${formatNum(p.avgLikes)}</div>
-      <div class="metric-label">Avg Likes</div>
-      <div class="metric-desc">Audience approval signal</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value">${formatNum(p.avgComments)}</div>
-      <div class="metric-label">Avg Comments</div>
-      <div class="metric-desc">Community interaction</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value">${formatNum(p.avgShares)}</div>
-      <div class="metric-label">Avg Shares</div>
-      <div class="metric-desc">Virality indicator</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value">${formatNum(p.avgSaves)}</div>
-      <div class="metric-label">Avg Saves</div>
-      <div class="metric-desc">Content value signal</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value ${erFollowersClass}">${p.erByFollowers}%</div>
-      <div class="metric-label">ER by Followers</div>
-      <div class="metric-desc">Engagement ÷ Followers</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value ${erViewsClass}">${p.erByViews}%</div>
-      <div class="metric-label">ER by Views</div>
-      <div class="metric-desc">Engagement ÷ Views</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-value ${reachClass}">${p.reachEfficiency}x</div>
-      <div class="metric-label">Reach Efficiency</div>
-      <div class="metric-desc">Views ÷ Followers</div>
+    <div class="profile-stat growth-signal-stat">
+      <div class="profile-stat-value growth-tag ${growth.growthClass}">${growth.growthText}</div>
+      <div class="profile-stat-label">Growth Signal</div>
     </div>
   `;
+
+  // ── Insights row data binding ──
+  // 1. Engagement Rate
+  document.getElementById('erValue').textContent = `${p.erByViews}%`;
+  const erBadge = document.getElementById('erBadge');
+  erBadge.textContent = p.erByViews >= p.nicheBenchmark ? 'Above Average' : 'Below Average';
+  erBadge.className = 'badge ' + (p.erByViews >= p.nicheBenchmark ? 'positive' : 'low');
+  document.getElementById('erComparison').textContent = `Benchmark niche avg: ${p.nicheBenchmark}%`;
+
+  // 2. Consistency
+  document.getElementById('consistencyValue').textContent = `${p.reelsPerWeek}/wk`;
+  const consistencyBadge = document.getElementById('consistencyBadge');
+  consistencyBadge.textContent = p.reelsPerWeek >= 3 ? 'Active' : p.reelsPerWeek >= 1 ? 'Moderate' : 'Stagnant';
+  consistencyBadge.className = 'badge ' + (p.reelsPerWeek >= 3 ? 'positive' : p.reelsPerWeek >= 1 ? 'warning' : 'low');
+
+  // 3. Views to Likes Ratio
+  document.getElementById('ratioValue').textContent = `1 in ${p.viewsToLikesRatio}`;
+  const ratioBadge = document.getElementById('ratioBadge');
+  ratioBadge.textContent = p.viewsToLikesRatio <= 12 ? 'Excellent' : p.viewsToLikesRatio <= 20 ? 'Average' : 'Low Likes';
+  ratioBadge.className = 'badge ' + (p.viewsToLikesRatio <= 12 ? 'positive' : p.viewsToLikesRatio <= 20 ? 'warning' : 'low');
+  document.getElementById('ratioComparison').textContent = `Views required per Like`;
+
+  // ── Performance Averages (bind values) ──
+  document.getElementById('avgViewsVal').textContent = formatNum(p.avgViews);
+  document.getElementById('avgLikesVal').textContent = formatNum(p.avgLikes);
+  document.getElementById('avgCommentsVal').textContent = formatNum(p.avgComments);
+
+  // ── Best Performing Reel widget ──
+  const bestReelContainer = document.getElementById('bestReelContainer');
+  if (p.bestReel) {
+    const br = p.bestReel;
+    const thumbSrc = br.thumbnailUrl ? `${API_BASE}/api/image-proxy?url=${encodeURIComponent(br.thumbnailUrl)}` : '';
+    const thumbHtml = thumbSrc
+      ? `<img class="best-reel-img" src="${thumbSrc}" alt="Best Reel" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="best-reel-placeholder" style="display:none">🎬</div>`
+      : `<div class="best-reel-placeholder">🎬</div>`;
+    bestReelContainer.innerHTML = `
+      <div class="best-reel-card-inner">
+        <a href="${br.postUrl}" target="_blank" rel="noopener" class="best-reel-thumb-wrap">
+          ${thumbHtml}
+          <div class="best-reel-play-overlay">▶</div>
+        </a>
+        <div class="best-reel-details">
+          <p class="best-reel-caption">"${br.caption || 'No caption'}"</p>
+          <div class="best-reel-stats">
+            <span class="best-stat-item">👁 <strong>${formatNum(br.views)}</strong> Views</span>
+            <span class="best-stat-item">❤️ <strong>${formatNum(br.likes)}</strong> Likes</span>
+            <span class="best-stat-item">💬 <strong>${formatNum(br.comments)}</strong> Comments</span>
+          </div>
+          <a href="${br.postUrl}" target="_blank" rel="noopener" class="btn btn-outline btn-sm best-reel-btn">View Reel</a>
+        </div>
+      </div>
+    `;
+  } else {
+    bestReelContainer.innerHTML = `<p style="color:var(--text-dim); text-align:center; padding: 20px;">No reels found to determine best performer.</p>`;
+  }
+
+  // ── Posting Schedule Assistant ──
+  document.getElementById('bestPostTimeAudience').textContent = `${p.optimalTime.day}s @ ${p.optimalTime.time}`;
+  document.getElementById('bestPostTimeIndustry').textContent = `${p.industryBenchmarkTime.day}s @ ${p.industryBenchmarkTime.time}`;
+
+  // ── Top Hashtags Cloud ──
+  const hashtagsCloud = document.getElementById('topHashtagsCloud');
+  if (p.topHashtags && p.topHashtags.length > 0) {
+    hashtagsCloud.innerHTML = p.topHashtags.map(h => `
+      <div class="hashtag-chip">
+        <span class="hashtag-name">${h.tag}</span>
+        <span class="hashtag-boost">💥 Avg Engagement: ${formatNum(h.avgEngagement)}</span>
+      </div>
+    `).join('');
+  } else {
+    hashtagsCloud.innerHTML = `<p style="color:var(--text-dim); text-align:center; padding: 10px; width: 100%;">No hashtags detected in recent reels.</p>`;
+  }
 
   // Chart
   renderChart(p.viewsTrend);
 
-  // Recent Posts — clickable to Instagram, with thumbnail images
-  document.getElementById('postsGrid').innerHTML = (p.recentPosts || []).map(post => {
-    const link = post.postUrl || `https://www.instagram.com/${p.username}/`;
-    const thumbSrc = post.thumbnailUrl ? `${API_BASE}/api/image-proxy?url=${encodeURIComponent(post.thumbnailUrl)}` : '';
-    const thumbHtml = thumbSrc
-      ? `<img class="post-thumb-img" src="${thumbSrc}" alt="Post" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="post-thumb-fallback" style="display:none">${post.type === 'Video' ? '🎬' : '📷'}</div>`
-      : `<div class="post-thumb-fallback">${post.type === 'Video' ? '🎬' : '📷'}</div>`;
-    return `
-      <a href="${link}" target="_blank" rel="noopener" class="post-item">
-        <div class="post-thumb-wrap">
-          ${thumbHtml}
-        </div>
-        <div class="post-stats">
-          <span class="post-stat">❤️ ${formatNum(post.likes)}</span>
-          <span class="post-stat">💬 ${formatNum(post.comments)}</span>
-          ${post.views > 0 ? `<span class="post-stat">👁 ${formatNum(post.views)}</span>` : ''}
-        </div>
-      </a>
-    `;
-  }).join('') || '<p style="color:var(--text-dim)">No recent posts found</p>';
-
-  // Recent Reels — separate section for video content
+  // Analyzed Reels grid
   document.getElementById('reelsGrid').innerHTML = (p.recentReels || []).map(reel => {
     const link = reel.postUrl || `https://www.instagram.com/${p.username}/reels/`;
     const thumbSrc = reel.thumbnailUrl ? `${API_BASE}/api/image-proxy?url=${encodeURIComponent(reel.thumbnailUrl)}` : '';
