@@ -589,6 +589,12 @@
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
+.growth-tag.warning {
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--yellow);
+  border: 1px solid rgba(234, 179, 8, 0.25);
+}
+
 
 .insights-row-grid {
   display: grid;

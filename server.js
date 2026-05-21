@@ -363,7 +363,7 @@ const localProfileCache = new Map();
 
 // ─── Profile Analytics API ────────────────────────────────────────────────────
 app.post('/api/profile-analytics', async (req, res) => {
-  const { username } = req.body || {};
+  const { username, refresh } = req.body || {};
   if (!username || !username.trim()) {
     return res.status(400).json({ error: 'No username provided' });
   }
@@ -375,31 +375,34 @@ app.post('/api/profile-analytics', async (req, res) => {
   const userId = extractUserId(req);
   const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
 
-  // 1. Check Caches (24-Hour Expiration)
-  try {
-    // Database Cache Check
-    const cachedRecord = await getCachedProfile(cleanUsername);
-    if (cachedRecord && cachedRecord.profile_data) {
-      const lastUpdate = new Date(cachedRecord.updated_at).getTime();
-      const ageHrs = (Date.now() - lastUpdate) / (1000 * 60 * 60);
+  // 1. Check Caches (24-Hour Expiration) - bypass if force refresh is requested
+  if (refresh !== true && refresh !== 'true') {
+    try {
+      // Database Cache Check
+      const cachedRecord = await getCachedProfile(cleanUsername);
+      if (cachedRecord && cachedRecord.profile_data) {
+        const lastUpdate = new Date(cachedRecord.updated_at).getTime();
+        const ageHrs = (Date.now() - lastUpdate) / (1000 * 60 * 60);
+        if (ageHrs < 24) {
+          console.log(`⚡ Serving cached DB profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
+          return res.json({ success: true, profile: cachedRecord.profile_data, cached: true });
+        }
+      }
+    } catch (cacheErr) {
+      console.warn('⚠️ Supabase cache check error, falling back to local memory cache:', cacheErr.message);
+    }
+
+    // Memory Cache Fallback Check
+    const localCached = localProfileCache.get(cleanUsername);
+    if (localCached) {
+      const ageHrs = (Date.now() - localCached.timestamp) / (1000 * 60 * 60);
       if (ageHrs < 24) {
-        console.log(`⚡ Serving cached DB profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
-        return res.json({ success: true, profile: cachedRecord.profile_data, cached: true });
+        console.log(`⚡ Serving cached memory profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
+        return res.json({ success: true, profile: localCached.profile, cached: true });
       }
     }
-  } catch (cacheErr) {
-    console.warn('⚠️ Supabase cache check error, falling back to local memory cache:', cacheErr.message);
   }
 
-  // Memory Cache Fallback Check
-  const localCached = localProfileCache.get(cleanUsername);
-  if (localCached) {
-    const ageHrs = (Date.now() - localCached.timestamp) / (1000 * 60 * 60);
-    if (ageHrs < 24) {
-      console.log(`⚡ Serving cached memory profile analytics for @${cleanUsername} (Age: ${ageHrs.toFixed(1)} hrs)`);
-      return res.json({ success: true, profile: localCached.profile, cached: true });
-    }
-  }
 
   // 2. No valid cache, fetch fresh data from Apify
   try {
@@ -440,9 +443,10 @@ app.post('/api/profile-analytics', async (req, res) => {
     const reels = allPosts.filter(p => 
       p.type === 'Video' || p.videoUrl || p.isVideo || 
       p.productType === 'clips' || p.productType === 'reels' ||
+      (p.playCount && p.playCount > 0) ||
+      (p.videoPlayCount && p.videoPlayCount > 0) ||
       (p.videoViewCount && p.videoViewCount > 0) || 
       (p.video_view_count && p.video_view_count > 0) || 
-      (p.playCount && p.playCount > 0) ||
       (p.views && p.views > 0)
     );
 
@@ -454,7 +458,7 @@ app.post('/api/profile-analytics', async (req, res) => {
     const postsCount = profile.postsCount || profile.posts_count || profile.mediaCount || 0;
 
     // Calculate metrics across the last 15 reels
-    const viewCounts = targetReels.map(p => p.videoViewCount || p.video_view_count || p.playCount || p.views || 0).filter(v => v > 0);
+    const viewCounts = targetReels.map(p => p.playCount || p.videoPlayCount || p.videoViewCount || p.video_view_count || p.views || 0).filter(v => v > 0);
     const likeCounts = targetReels.map(p => p.likesCount || p.likes || p.like_count || 0);
     const commentCounts = targetReels.map(p => p.commentsCount || p.comments || p.comment_count || 0);
     const shareCounts = targetReels.map(p => p.sharesCount || p.shares || p.share_count || 0);
@@ -512,15 +516,15 @@ app.post('/api/profile-analytics', async (req, res) => {
     let bestReel = null;
     if (targetReels.length > 0) {
       const bestRaw = targetReels.reduce((best, curr) => {
-        const currViews = curr.videoViewCount || curr.video_view_count || curr.playCount || curr.views || 0;
-        const bestViews = best ? (best.videoViewCount || best.video_view_count || best.playCount || best.views || 0) : -1;
+        const currViews = curr.playCount || curr.videoPlayCount || curr.videoViewCount || curr.video_view_count || curr.views || 0;
+        const bestViews = best ? (best.playCount || best.videoPlayCount || best.videoViewCount || best.video_view_count || best.views || 0) : -1;
         return currViews > bestViews ? curr : best;
       }, null);
       if (bestRaw) {
         bestReel = {
           likes: bestRaw.likesCount || bestRaw.likes || bestRaw.like_count || 0,
           comments: bestRaw.commentsCount || bestRaw.comments || bestRaw.comment_count || 0,
-          views: bestRaw.videoViewCount || bestRaw.video_view_count || bestRaw.playCount || bestRaw.views || 0,
+          views: bestRaw.playCount || bestRaw.videoPlayCount || bestRaw.videoViewCount || bestRaw.video_view_count || bestRaw.views || 0,
           date: bestRaw.timestamp || bestRaw.taken_at || bestRaw.date || null,
           thumbnailUrl: bestRaw.displayUrl || bestRaw.thumbnailUrl || bestRaw.thumbnail_src || bestRaw.imageUrl || bestRaw.display_url || '',
           postUrl: bestRaw.url || (bestRaw.shortCode ? `https://www.instagram.com/reel/${bestRaw.shortCode}/` : (bestRaw.shortcode ? `https://www.instagram.com/reel/${bestRaw.shortcode}/` : '')),
@@ -531,6 +535,80 @@ app.post('/api/profile-analytics', async (req, res) => {
 
     // 6. Views-to-Likes ratio (views per 1 like)
     const viewsToLikesRatio = avgLikes15 > 0 ? parseFloat((avgViews15 / avgLikes15).toFixed(1)) : 0;
+
+    // ── Calculate Creatorly Score ──
+    const benchmarkViews = Math.max(2000, Math.round(followersCount * 0.08));
+    const benchmarkLikes = Math.round(benchmarkViews * 0.07);
+    const benchmarkComments = Math.round(benchmarkViews * 0.005);
+    
+    // Scoring ER
+    let erScore = 0;
+    if (erByViews >= nicheBenchmark) {
+      erScore = 70 + Math.min(30, ((erByViews - nicheBenchmark) / nicheBenchmark) * 30);
+    } else {
+      erScore = nicheBenchmark > 0 ? (erByViews / nicheBenchmark) * 70 : 70;
+    }
+    erScore = Math.max(10, Math.min(100, erScore));
+
+    // Scoring views-to-likes ratio (standard avg is 15 views per like. Lower is better)
+    let ratioScore = 0;
+    const targetRatio = 15.0;
+    if (viewsToLikesRatio > 0) {
+      if (viewsToLikesRatio <= targetRatio) {
+        ratioScore = 70 + ((targetRatio - viewsToLikesRatio) / targetRatio) * 30;
+      } else {
+        ratioScore = 70 - Math.min(60, ((viewsToLikesRatio - targetRatio) / 30) * 50);
+      }
+    } else {
+      ratioScore = 50;
+    }
+    ratioScore = Math.max(10, Math.min(100, ratioScore));
+
+    // Scoring consistency (benchmark is 3.0 reels per week)
+    let consistencyScore = 0;
+    if (reelsPerWeek >= 3.0) {
+      consistencyScore = 75 + Math.min(25, (reelsPerWeek - 3.0) * 8);
+    } else {
+      consistencyScore = (reelsPerWeek / 3.0) * 75;
+    }
+    consistencyScore = Math.max(10, Math.min(100, consistencyScore));
+
+    // Scoring average views
+    let viewsScore = 0;
+    if (avgViews15 >= benchmarkViews) {
+      viewsScore = 70 + Math.min(30, ((avgViews15 - benchmarkViews) / benchmarkViews) * 20);
+    } else {
+      viewsScore = benchmarkViews > 0 ? (avgViews15 / benchmarkViews) * 70 : 70;
+    }
+    viewsScore = Math.max(10, Math.min(100, viewsScore));
+
+    // Scoring average likes
+    let likesScore = 0;
+    if (avgLikes15 >= benchmarkLikes) {
+      likesScore = 70 + Math.min(30, ((avgLikes15 - benchmarkLikes) / benchmarkLikes) * 20);
+    } else {
+      likesScore = benchmarkLikes > 0 ? (avgLikes15 / benchmarkLikes) * 70 : 70;
+    }
+    likesScore = Math.max(10, Math.min(100, likesScore));
+
+    // Scoring average comments
+    let commentsScore = 0;
+    if (avgComments15 >= benchmarkComments) {
+      commentsScore = 70 + Math.min(30, ((avgComments15 - benchmarkComments) / benchmarkComments) * 20);
+    } else {
+      commentsScore = benchmarkComments > 0 ? (avgComments15 / benchmarkComments) * 70 : 70;
+    }
+    commentsScore = Math.max(10, Math.min(100, commentsScore));
+
+    // Weighted score (Weights: ER 30%, Ratio 20%, Consistency 20%, Views 10%, Likes 10%, Comments 10%)
+    const creatorlyScore = Math.round(
+      erScore * 0.3 +
+      ratioScore * 0.2 +
+      consistencyScore * 0.2 +
+      viewsScore * 0.1 +
+      likesScore * 0.1 +
+      commentsScore * 0.1
+    );
 
     // 7. Optimal day & time to post based on engagement
     function calculateBestPostTime(posts) {
@@ -656,10 +734,12 @@ app.post('/api/profile-analytics', async (req, res) => {
       optimalTime,
       industryBenchmarkTime,
       topHashtags,
+      creatorlyScore,
+      nicheBenchmarkScore: 70,
 
       // Chronological view/likes trend for the last 15 reels
       viewsTrend: targetReels.slice().reverse().map(p => ({
-        views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+        views: p.playCount || p.videoPlayCount || p.videoViewCount || p.video_view_count || p.views || 0,
         likes: p.likesCount || p.likes || p.like_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,
       })),
@@ -669,7 +749,7 @@ app.post('/api/profile-analytics', async (req, res) => {
         caption: (p.caption || p.text || '').slice(0, 100),
         likes: p.likesCount || p.likes || p.like_count || 0,
         comments: p.commentsCount || p.comments || p.comment_count || 0,
-        views: p.videoViewCount || p.video_view_count || p.playCount || p.views || 0,
+        views: p.playCount || p.videoPlayCount || p.videoViewCount || p.video_view_count || p.views || 0,
         shares: p.sharesCount || p.shares || p.share_count || 0,
         saves: p.savesCount || p.saves || p.save_count || 0,
         date: p.timestamp || p.taken_at || p.date || null,

@@ -164,58 +164,23 @@ function renderProfile(p) {
     `<span class="profile-tag">${t}</span>`
   ).join('');
 
-  // ── Growth Signal calculation ──
-  const getGrowthSignal = (username, currentFollowers) => {
-    const key = `creatorly_snapshot_${username.toLowerCase()}`;
-    const stored = localStorage.getItem(key);
-    const now = Date.now();
-    let growthText = '';
-    let growthClass = 'neutral';
+  // ── Creatorly Score calculation ──
+  const score = p.creatorlyScore || 70;
+  let scoreClass = 'neutral';
+  let scoreText = 'Needs Improvement';
+  if (score >= 80) {
+    scoreClass = 'positive';
+    scoreText = 'Excellent';
+  } else if (score >= 65) {
+    scoreClass = 'warning';
+    scoreText = 'Good';
+  } else if (score < 50) {
+    scoreClass = 'negative';
+    scoreText = 'Needs Attention';
+  }
 
-    if (stored) {
-      try {
-        const history = JSON.parse(stored);
-        if (Array.isArray(history) && history.length > 0) {
-          const lastScan = history[history.length - 1];
-          const diff = currentFollowers - lastScan.followers;
-          const days = Math.max(1, Math.round((now - lastScan.timestamp) / (1000 * 60 * 60 * 24)));
-          
-          if (diff > 0) {
-            const pct = ((diff / lastScan.followers) * 100).toFixed(1);
-            growthText = `📈 +${formatNum(diff)} followers (+${pct}%) in last ${days}d`;
-            growthClass = 'positive';
-          } else if (diff < 0) {
-            const pct = (Math.abs(diff / lastScan.followers) * 100).toFixed(1);
-            growthText = `📉 -${formatNum(Math.abs(diff))} followers (-${pct}%) in last ${days}d`;
-            growthClass = 'negative';
-          } else {
-            growthText = `📊 Stagnant (no change in last ${days}d)`;
-            growthClass = 'neutral';
-          }
 
-          const lastScanDate = new Date(lastScan.timestamp).toDateString();
-          const todayDate = new Date(now).toDateString();
-          if (lastScanDate !== todayDate || lastScan.followers !== currentFollowers) {
-            history.push({ timestamp: now, followers: currentFollowers });
-            if (history.length > 5) history.shift();
-            localStorage.setItem(key, JSON.stringify(history));
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing growth snapshot:', e);
-      }
-    } else {
-      const history = [{ timestamp: now, followers: currentFollowers }];
-      localStorage.setItem(key, JSON.stringify(history));
-      growthText = `🌱 Baseline set (Growth will show on next scan)`;
-      growthClass = 'neutral';
-    }
-    return { growthText, growthClass };
-  };
-
-  const growth = getGrowthSignal(p.username, p.followersCount);
-
-  // Stats row (Followers + Posts + Growth Signal status tag)
+  // Stats row (Followers + Posts + Creatorly Score status tag)
   document.getElementById('profileStatsRow').innerHTML = `
     <div class="profile-stat">
       <div class="profile-stat-value">${formatNum(p.followersCount)}</div>
@@ -226,8 +191,8 @@ function renderProfile(p) {
       <div class="profile-stat-label">Total Posts</div>
     </div>
     <div class="profile-stat growth-signal-stat">
-      <div class="profile-stat-value growth-tag ${growth.growthClass}">${growth.growthText}</div>
-      <div class="profile-stat-label">Growth Signal</div>
+      <div class="profile-stat-value growth-tag ${scoreClass}">${score}% (${scoreText})</div>
+      <div class="profile-stat-label">Creatorly Score (Avg: 70%)</div>
     </div>
   `;
 
@@ -239,18 +204,45 @@ function renderProfile(p) {
   erBadge.className = 'badge ' + (p.erByViews >= p.nicheBenchmark ? 'positive' : 'low');
   document.getElementById('erComparison').textContent = `Benchmark niche avg: ${p.nicheBenchmark}%`;
 
-  // 2. Consistency
-  document.getElementById('consistencyValue').textContent = `${p.reelsPerWeek}/wk`;
+  // 2. Consistency (Friendly display)
+  const reelsPerWeek = p.reelsPerWeek || 0;
+  let consistencyValText = '';
+  let consistencyDescText = '';
+  
+  if (reelsPerWeek === 0) {
+    consistencyValText = 'No reels';
+    consistencyDescText = 'We recommend posting at least 3 reels per week!';
+  } else {
+    const daysPerReel = 7 / reelsPerWeek;
+    if (daysPerReel <= 1.2) {
+      consistencyValText = 'Every day';
+    } else if (daysPerReel <= 1.8) {
+      consistencyValText = 'Every 1.5 days';
+    } else if (daysPerReel <= 2.5) {
+      consistencyValText = 'Every 2 days';
+    } else {
+      consistencyValText = `Every ${Math.round(daysPerReel)} days`;
+    }
+
+    if (reelsPerWeek >= 3) {
+      consistencyDescText = `Beating niche avg (3/wk). Keep it up!`;
+    } else {
+      consistencyDescText = `Below niche avg (3/wk). Try posting more frequently!`;
+    }
+  }
+
+  document.getElementById('consistencyValue').textContent = consistencyValText;
   const consistencyBadge = document.getElementById('consistencyBadge');
-  consistencyBadge.textContent = p.reelsPerWeek >= 3 ? 'Active' : p.reelsPerWeek >= 1 ? 'Moderate' : 'Stagnant';
-  consistencyBadge.className = 'badge ' + (p.reelsPerWeek >= 3 ? 'positive' : p.reelsPerWeek >= 1 ? 'warning' : 'low');
+  consistencyBadge.textContent = reelsPerWeek >= 3 ? 'Excellent' : reelsPerWeek >= 1.5 ? 'Average' : 'Low';
+  consistencyBadge.className = 'badge ' + (reelsPerWeek >= 3 ? 'positive' : reelsPerWeek >= 1.5 ? 'warning' : 'low');
+  document.getElementById('consistencyComparison').textContent = consistencyDescText;
 
   // 3. Views to Likes Ratio
   document.getElementById('ratioValue').textContent = `1 in ${p.viewsToLikesRatio}`;
   const ratioBadge = document.getElementById('ratioBadge');
   ratioBadge.textContent = p.viewsToLikesRatio <= 12 ? 'Excellent' : p.viewsToLikesRatio <= 20 ? 'Average' : 'Low Likes';
   ratioBadge.className = 'badge ' + (p.viewsToLikesRatio <= 12 ? 'positive' : p.viewsToLikesRatio <= 20 ? 'warning' : 'low');
-  document.getElementById('ratioComparison').textContent = `Views required per Like`;
+  document.getElementById('ratioComparison').textContent = `Views per Like (Niche Avg: 1 in 15)`;
 
   // ── Performance Averages (bind values) ──
   document.getElementById('avgViewsVal').textContent = formatNum(p.avgViews);
