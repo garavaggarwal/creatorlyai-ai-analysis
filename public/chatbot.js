@@ -26,6 +26,7 @@
       line-height: 1.5;
       word-wrap: break-word;
       font-weight: 400;
+      white-space: pre-wrap;
     }
     .creatorly-msg-row.user .creatorly-msg-bubble {
       background: #4f46e5;
