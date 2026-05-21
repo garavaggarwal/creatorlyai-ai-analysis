@@ -533,6 +533,50 @@ app.post('/api/profile-analytics', async (req, res) => {
       }
     }
 
+    // Worst performing reel (lowest views)
+    let worstReel = null;
+    if (targetReels.length > 0) {
+      const worstRaw = targetReels.reduce((worst, curr) => {
+        const currViews = curr.playCount || curr.videoPlayCount || curr.videoViewCount || curr.video_view_count || curr.views || 0;
+        const worstViews = worst ? (worst.playCount || worst.videoPlayCount || worst.videoViewCount || worst.video_view_count || worst.views || 0) : Infinity;
+        return currViews < worstViews ? curr : worst;
+      }, null);
+      if (worstRaw) {
+        worstReel = {
+          likes: worstRaw.likesCount || worstRaw.likes || worstRaw.like_count || 0,
+          comments: worstRaw.commentsCount || worstRaw.comments || worstRaw.comment_count || 0,
+          views: worstRaw.playCount || worstRaw.videoPlayCount || worstRaw.videoViewCount || worstRaw.video_view_count || worstRaw.views || 0,
+          date: worstRaw.timestamp || worstRaw.taken_at || worstRaw.date || null,
+          thumbnailUrl: worstRaw.displayUrl || worstRaw.thumbnailUrl || worstRaw.thumbnail_src || worstRaw.imageUrl || worstRaw.display_url || '',
+          postUrl: worstRaw.url || (worstRaw.shortCode ? `https://www.instagram.com/reel/${worstRaw.shortCode}/` : (worstRaw.shortcode ? `https://www.instagram.com/reel/${worstRaw.shortcode}/` : '')),
+          caption: (worstRaw.caption || worstRaw.text || '').slice(0, 100),
+        };
+      }
+    }
+
+    // Determine recentTrend ('growing' | 'flat' | 'declining')
+    let recentTrend = 'flat';
+    if (targetReels.length >= 5) {
+      const recent5 = targetReels.slice(0, 5).map(p => p.playCount || p.videoPlayCount || p.videoViewCount || p.video_view_count || p.views || 0);
+      const older10 = targetReels.slice(5).map(p => p.playCount || p.videoPlayCount || p.videoViewCount || p.video_view_count || p.views || 0);
+      
+      const avgRecent = recent5.reduce((a, b) => a + b, 0) / recent5.length;
+      const avgOlder = older10.length > 0 ? (older10.reduce((a, b) => a + b, 0) / older10.length) : avgRecent;
+      
+      const diffPct = avgOlder > 0 ? (avgRecent - avgOlder) / avgOlder : 0;
+      if (diffPct > 0.15) {
+        recentTrend = 'growing';
+      } else if (diffPct < -0.15) {
+        recentTrend = 'declining';
+      } else {
+        recentTrend = 'flat';
+      }
+    }
+
+    // Estimate profile hook score out of 10 based on views-to-likes or ER
+    const hookScore = erByViews >= nicheBenchmark ? Math.round(7 + Math.min(3, ((erByViews - nicheBenchmark) / nicheBenchmark) * 3)) : Math.max(1, Math.round((erByViews / nicheBenchmark) * 7));
+
+
     // 6. Views-to-Likes ratio (views per 1 like)
     const viewsToLikesRatio = avgLikes15 > 0 ? parseFloat((avgViews15 / avgLikes15).toFixed(1)) : 0;
 
@@ -731,6 +775,9 @@ app.post('/api/profile-analytics', async (req, res) => {
       viewsToLikesRatio,
       reelsPerWeek,
       bestReel,
+      worstReel,
+      recentTrend,
+      hookScore,
       optimalTime,
       industryBenchmarkTime,
       topHashtags,
@@ -1451,6 +1498,107 @@ Example format: ["prompt 1 text here", "prompt 2 text here", ...]`;
   }
 });
 
+// ─── Chatbot API ──────────────────────────────────────────────────────────────
+app.post('/api/chatbot', async (req, res) => {
+  const { messages, creatorProfile } = req.body || {};
+
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn('⚠️  GEMINI_API_KEY not configured locally. Proxying chatbot request to Railway backend...');
+    try {
+      const railwayRes = await fetch('https://api.creatorlyai.in/api/chatbot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      if (!railwayRes.ok) {
+        const errText = await railwayRes.text();
+        return res.status(railwayRes.status).send(errText);
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = railwayRes.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+      return;
+    } catch (proxyErr) {
+      console.error('❌ Failed to proxy local chatbot request to Railway:', proxyErr.message);
+      return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server and local proxy failed: ' + proxyErr.message });
+    }
+  }
+
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    
+    const creatorProfileJson = creatorProfile ? JSON.stringify(creatorProfile, null, 2) : '{}';
+
+    const systemInstruction = `You are CreatorlyAI, a personal Instagram growth strategist for Indian creators.
+
+You have access to this creator's profile data:
+${creatorProfileJson}
+
+Rules:
+- Always reference their actual data when answering. Never give generic advice when their data is available
+- Be concise and specific. Max 4 sentences per response unless they ask for a detailed breakdown
+- Speak like a sharp strategist, not a helpful AI assistant. No filler phrases like "Great question" or "Certainly"
+- When mentioning a metric, always compare it to niche average so creator understands context
+- End every response with one specific next action they can take
+- If asked about hooks, always reference their actual hook score and worst performing reel
+- If asked about captions, generate options that match their niche and tone
+- If asked about brand rates, use their actual engagement rate and avg views to calculate
+- If data is unavailable for a question, answer from general creator knowledge but flag that it is based on general benchmarks not their data
+- Never use bullet points in responses. Write in short flowing sentences like a real person texting advice`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      systemInstruction
+    });
+
+    const contents = [];
+    if (messages && Array.isArray(messages)) {
+      messages.forEach(m => {
+        contents.push({
+          role: m.role === 'assistant' || m.role === 'model' ? 'model' : 'user',
+          parts: [{ text: m.content || '' }]
+        });
+      });
+    }
+
+    // Set headers for SSE streaming
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders && res.flushHeaders();
+
+    const resultStream = await model.generateContentStream({ contents });
+
+    for await (const chunk of resultStream.stream) {
+      const chunkText = chunk.text();
+      res.write(chunkText);
+    }
+    res.end();
+
+  } catch (err) {
+    console.error('❌ Chatbot streaming error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || 'Failed to get chat response' });
+    } else {
+      res.write(`\n[Error: ${err.message}]`);
+      res.end();
+    }
+  }
+});
+
 // ─── Error handler ────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -1464,5 +1612,5 @@ app.listen(PORT, () => {
   console.log(`   Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Set' : '❌ MISSING'}`);
 });
 
-// Trigger redeployment
+// Trigger redeployment - chatbot and rate card integration v1.1.0
 

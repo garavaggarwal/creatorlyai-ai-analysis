@@ -16,6 +16,10 @@
       "dest": "/api/analyse.js"
     },
     {
+      "src": "/api/chatbot",
+      "dest": "/api/chatbot.js"
+    },
+    {
       "src": "/login",
       "dest": "/public/login.html"
     },

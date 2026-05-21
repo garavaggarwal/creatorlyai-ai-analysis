@@ -9,6 +9,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/profile.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      corePlugins: {
+        preflight: false
+      }
+    }
+  </script>
+  <script src="/chatbot.js" defer></script>
 </head>
 <body>
 
@@ -141,8 +150,11 @@
       <!-- Advanced Insights Section (Consistency + ER vs Benchmark + Ratio) -->
       <div class="insights-row-grid">
         <div class="card insight-sub-card">
-          <div class="insight-label-row">
-            <span class="insight-mini-title">Engagement by Viewer</span>
+          <div class="insight-label-row" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="insight-mini-title">Engagement by Viewer</span>
+              <button id="askAiErBtn" title="Ask CreatorlyAI about this metric" style="background:none; border:none; color:var(--accent2); cursor:pointer; font-size:0.85rem; padding:0; display:inline-flex; align-items:center; opacity:0.8; transition:opacity 0.2s; margin-left: 2px;">✨</button>
+            </div>
             <span id="erBadge" class="badge">--</span>
           </div>
           <div class="insight-value-large" id="erValue">0.0%</div>
@@ -165,6 +177,29 @@
           </div>
           <div class="insight-value-large" id="ratioValue">1 in --</div>
           <div class="insight-comparison-desc" id="ratioComparison">Views required per Like</div>
+        </div>
+      </div>
+
+      <!-- Brand Collaboration Rate Card -->
+      <div class="card rate-card" id="brandRateCard" style="margin-top: 20px;">
+        <div class="rate-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
+            <span>💳</span> Brand Collaboration Rate Card
+          </h3>
+          <button class="btn btn-sm btn-outline ask-ai-btn" id="askAiRateBtn" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; border-color: var(--accent2); color: var(--accent2); background: transparent; cursor: pointer;">
+            <span>✨</span> Ask AI
+          </button>
+        </div>
+        <div class="rate-card-body" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; align-items: center;">
+          <div class="rate-tier-wrap" style="text-align: center; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border);">
+            <div class="rate-tier-label" style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Creator Tier</div>
+            <div class="rate-tier-value" id="creatorTierValue" style="font-size: 1.25rem; font-weight: 700; color: var(--accent2);">--</div>
+          </div>
+          <div class="rate-range-wrap">
+            <div class="rate-range-label" style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Est. Collab Rate per Reel</div>
+            <div class="rate-range-value" id="collabRateRange" style="font-size: 1.8rem; font-weight: 800; color: var(--green);">--</div>
+            <div class="rate-range-desc" id="collabRateDesc" style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px;">Based on your average views and engagement rate</div>
+          </div>
         </div>
       </div>
 

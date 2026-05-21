@@ -963,6 +963,16 @@ function renderResults(r) {
       const circumference = 188;
       const offset = circumference - (s / 10) * circumference;
       const pointsHtml = points.map(p => `<div class="reel-score-point">• ${p}</div>`).join('');
+
+      let aiButtonHtml = '';
+      if (c.key === 'hook') {
+        aiButtonHtml = `
+          <button class="ask-ai-trigger-btn" onclick="window.openCreatorlyChat('My reel hook score is ' + ${s} + '/10. How can I improve this hook to hook viewers in the first 3 seconds?')">
+            <span class="sparkle-icon">✨</span> Ask AI
+          </button>
+        `;
+      }
+
       return `
         <div class="reel-score-card">
           <div class="reel-score-ring">
@@ -975,6 +985,7 @@ function renderResults(r) {
           <div class="reel-score-label">${c.label}</div>
           <span class="reel-score-badge ${badgeClass}">${badgeText}</span>
           <div class="reel-score-points">${pointsHtml}</div>
+          ${aiButtonHtml}
         </div>
       `;
     }).join('');
@@ -983,21 +994,34 @@ function renderResults(r) {
   // 6. Timeline — always show
   const timelineCard = document.getElementById('timelineCard');
   const td = r.timeline_data;
-  if (td && td.duration > 0) {
-    timelineCard.hidden = false;
-    renderSyncTimeline(td, r.sync_timeline, r.sync_score);
-  } else if (r.sync_timeline && r.sync_timeline.length > 0 && r.video_info?.duration > 0) {
-    timelineCard.hidden = false;
-    renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
+  if (timelineCard) {
+    if (td && td.duration > 0) {
+      timelineCard.hidden = false;
+      renderSyncTimeline(td, r.sync_timeline, r.sync_score);
+    } else if (r.sync_timeline && r.sync_timeline.length > 0 && r.video_info?.duration > 0) {
+      timelineCard.hidden = false;
+      renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
+    }
   }
 
   // 6. Captions (copyable)
   const suggestionsCard = document.getElementById('suggestionsCard');
   const captionsEl = document.getElementById('suggestedCaptions');
   if (r.suggested_captions && r.suggested_captions.length > 0 && captionsEl) {
-    captionsEl.innerHTML = r.suggested_captions.slice(0, 5).map((c, i) =>
+    let captionsHtml = r.suggested_captions.slice(0, 5).map((c, i) =>
       `<div class="caption-item-v2"><span class="caption-num-v2">${i + 1}</span><span class="caption-text-v2">${c}</span><button class="copy-btn-sm" onclick="copyText(this, '${c.replace(/'/g, "\\'")}')">Copy</button></div>`
     ).join('');
+
+    // Add Ask AI trigger button for refining captions
+    captionsHtml += `
+      <div class="ask-ai-caption-btn-container">
+        <button class="ask-ai-caption-btn" onclick="window.openCreatorlyChat('Can you refine the caption suggestions for this reel to make them more conversational?')">
+          <span class="sparkle-icon">✨</span> Ask AI to refine captions
+        </button>
+      </div>
+    `;
+
+    captionsEl.innerHTML = captionsHtml;
     if (suggestionsCard) suggestionsCard.hidden = false;
   }
 
@@ -1011,18 +1035,14 @@ function renderResults(r) {
     }).join('');
     if (hashtagsCard) hashtagsCard.hidden = false;
   }
-}
 
-/* ── Helper renderers ── */
-
-/* ── Select a breakdown chip and show its detail ── */
-function selectBreakdownChip(key) {
-
+  // 8. Overall score ring animation
   if (score !== null) {
-    // Start ring at full offset (empty) then animate to target
     const targetOffset = circumference - (score / 10) * circumference;
-    ringFill.style.strokeDashoffset = circumference; // start empty
-    ringFill.style.transition = 'none';
+    if (ringFill) {
+      ringFill.style.strokeDashoffset = circumference; // start empty
+      ringFill.style.transition = 'none';
+    }
 
     // Ease-out cubic function
     function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
@@ -1036,51 +1056,65 @@ function selectBreakdownChip(key) {
       const eased = easeOut(t);
 
       // Animate ring
-      const currentOffset = circumference - eased * (circumference - targetOffset);
-      ringFill.style.strokeDashoffset = currentOffset;
+      if (ringFill) {
+        const currentOffset = circumference - eased * (circumference - targetOffset);
+        ringFill.style.strokeDashoffset = currentOffset;
+      }
 
       // Animate counter — show X.X/10 format
-      const currentScore = eased * score;
-      scoreEl.textContent = currentScore.toFixed(1) + '/10';
+      if (scoreEl) {
+        const currentScore = eased * score;
+        scoreEl.textContent = currentScore.toFixed(1) + '/10';
+      }
 
       if (t < 1) {
         requestAnimationFrame(animateRing);
       } else {
-        ringFill.style.strokeDashoffset = targetOffset;
-        scoreEl.textContent = score.toFixed(1) + '/10';
-        scoreEl.style.fontSize = '0.9rem';
+        if (ringFill) ringFill.style.strokeDashoffset = targetOffset;
+        if (scoreEl) {
+          scoreEl.textContent = score.toFixed(1) + '/10';
+          scoreEl.style.fontSize = '0.9rem';
+        }
       }
     }
 
     // Small delay so DOM is ready
     setTimeout(() => requestAnimationFrame(animateRing), 80);
   } else {
-    scoreEl.textContent = '—';
+    if (scoreEl) scoreEl.textContent = '—';
   }
 
   // Verdict — action-oriented labels
-  document.getElementById('scoreVerdict').textContent =
-    score >= 8 ? 'Viral Potential 🔥' : score >= 6.5 ? 'Strong Content' : score >= 5 ? 'Good Foundation' : 'Needs Rework';
+  const scoreVerdict = document.getElementById('scoreVerdict');
+  if (scoreVerdict) {
+    scoreVerdict.textContent =
+      score >= 8 ? 'Viral Potential 🔥' : score >= 6.5 ? 'Strong Content' : score >= 5 ? 'Good Foundation' : 'Needs Rework';
+  }
 
   // Performance badge
   const perf = r.predicted_performance || '';
   const perfBadge = document.getElementById('perfBadge');
-  const perfMap = {
-    viral_potential: ['🔥 Viral Potential', 'perf-viral'],
-    above_average:   ['📈 High Reach', 'perf-above'],
-    average:         ['⚡ Good Foundation', 'perf-average'],
-    below_average:   ['🔧 Needs Rework', 'perf-below'],
-  };
-  const [label, cls] = perfMap[perf] || ['⚡ Analysed', 'perf-average'];
-  perfBadge.textContent = label;
-  perfBadge.className = `perf-badge ${cls}`;
+  if (perfBadge) {
+    const perfMap = {
+      viral_potential: ['🔥 Viral Potential', 'perf-viral'],
+      above_average:   ['📈 High Reach', 'perf-above'],
+      average:         ['⚡ Good Foundation', 'perf-average'],
+      below_average:   ['🔧 Needs Rework', 'perf-below'],
+    };
+    const [label, cls] = perfMap[perf] || ['⚡ Analysed', 'perf-average'];
+    perfBadge.textContent = label;
+    perfBadge.className = `perf-badge ${cls}`;
+  }
 
   // Overall summary
-  document.getElementById('overallSummary').textContent = r.overall_summary || '';
+  const overallSummary = document.getElementById('overallSummary');
+  if (overallSummary) overallSummary.textContent = r.overall_summary || '';
 
   // Wins & Fixes
-  renderList('winsList', r.top_3_wins || []);
-  renderList('fixesList', r.top_3_fixes || []);
+  const winsList = document.getElementById('winsList');
+  if (winsList) renderList('winsList', r.top_3_wins || []);
+  const fixesList = document.getElementById('fixesList');
+  if (fixesList) renderList('fixesList', r.top_3_fixes || []);
 
   // Score breakdown — horizontally scrollable chips + detail card
   const breakdownKeys = [
@@ -1095,9 +1129,11 @@ function selectBreakdownChip(key) {
   ];
   const scrollContainer = document.getElementById('breakdownScroll');
   const detailContainer = document.getElementById('breakdownDetail');
-  scrollContainer.innerHTML = '';
-  detailContainer.hidden = true;
-  detailContainer.innerHTML = '';
+  if (scrollContainer) scrollContainer.innerHTML = '';
+  if (detailContainer) {
+    detailContainer.hidden = true;
+    detailContainer.innerHTML = '';
+  }
 
   // Store breakdown data for click handling
   window._breakdownData = {};
@@ -1112,48 +1148,37 @@ function selectBreakdownChip(key) {
     window._breakdownData[key] = { item, label, icon, scoreCls };
 
     // Create chip
-    const chip = document.createElement('div');
-    chip.className = `breakdown-chip ${scoreCls}`;
-    chip.dataset.key = key;
-    chip.innerHTML = `
-      <span class="chip-icon">${icon}</span>
-      <span class="chip-score">${s ?? '—'}</span>
-      <span class="chip-label">${label}</span>
-    `;
-    chip.onclick = () => selectBreakdownChip(key);
-    scrollContainer.appendChild(chip);
+    if (scrollContainer) {
+      const chip = document.createElement('div');
+      chip.className = `breakdown-chip ${scoreCls}`;
+      chip.dataset.key = key;
+      chip.innerHTML = `
+        <span class="chip-icon">${icon}</span>
+        <span class="chip-score">${s ?? '—'}</span>
+        <span class="chip-label">${label}</span>
+      `;
+      chip.onclick = () => selectBreakdownChip(key);
+      scrollContainer.appendChild(chip);
 
-    // Auto-select first chip
-    if (idx === 0) setTimeout(() => selectBreakdownChip(key), 200);
+      // Auto-select first chip
+      if (idx === 0) setTimeout(() => selectBreakdownChip(key), 200);
+    }
   });
-
-  // Caption analysis — removed from results page
-  // Hashtag analysis — removed from results page
-
-  // Suggested captions (no hashtags)
-  const hasSugCaptions = r.suggested_captions && r.suggested_captions.length > 0;
-  if (hasSugCaptions) {
-    document.getElementById('suggestionsCard').hidden = false;
-    document.getElementById('suggestedCaptions').innerHTML = r.suggested_captions.map((c, i) =>
-      `<div class="caption-suggestion">
-        <span class="caption-num">${i + 1}</span>
-        <span class="caption-text">${c}</span>
-        <button class="copy-btn" onclick="copyText(this, '${c.replace(/'/g, "\\'")}')">Copy</button>
-      </div>`
-    ).join('');
-  }
 
   // Hook Rewrite section — better opening suggestions from hook analysis
   const hookData = r.hook;
   const hookRewriteCard = document.getElementById('hookRewriteCard');
-  if (hookData && hookData.improvements && hookData.improvements.length > 0) {
+  if (hookRewriteCard && hookData && hookData.improvements && hookData.improvements.length > 0) {
     hookRewriteCard.hidden = false;
-    document.getElementById('hookRewrites').innerHTML = hookData.improvements.map((fix, i) =>
-      `<div class="hook-rewrite-item">
-        <span class="hook-rewrite-num">${i + 1}</span>
-        <span class="hook-rewrite-text">${fix}</span>
-      </div>`
-    ).join('');
+    const hookRewritesEl = document.getElementById('hookRewrites');
+    if (hookRewritesEl) {
+      hookRewritesEl.innerHTML = hookData.improvements.map((fix, i) =>
+        `<div class="hook-rewrite-item">
+          <span class="hook-rewrite-num">${i + 1}</span>
+          <span class="hook-rewrite-text">${fix}</span>
+        </div>`
+      ).join('');
+    }
   }
 
   // Video info
@@ -1169,20 +1194,11 @@ function selectBreakdownChip(key) {
     { label: 'Cuts/min',     value: tech.cutsPerMinute ?? '—' },
     { label: 'Silence Gaps', value: tech.silenceGaps ?? '—' },
   ];
-  document.getElementById('videoInfoGrid').innerHTML = infoItems.map(({ label, value }) =>
-    `<div class="info-item"><div class="info-label">${label}</div><div class="info-value">${value}</div></div>`
-  ).join('');
-
-  // Sync Timeline — show if we have timeline_data OR sync_timeline
-  const td = r.timeline_data;
-  const timelineCard = document.getElementById('timelineCard');
-  if (td && td.duration > 0) {
-    timelineCard.hidden = false;
-    renderSyncTimeline(td, r.sync_timeline, r.sync_score);
-  } else if (r.sync_timeline && r.sync_timeline.length > 0 && r.video_info?.duration > 0) {
-    // Fallback: build timeline_data from video_info
-    timelineCard.hidden = false;
-    renderSyncTimeline({ duration: r.video_info.duration, scene_cuts: [], silence_segments: [] }, r.sync_timeline, r.sync_score);
+  const videoInfoGrid = document.getElementById('videoInfoGrid');
+  if (videoInfoGrid) {
+    videoInfoGrid.innerHTML = infoItems.map(({ label, value }) =>
+      `<div class="info-item"><div class="info-label">${label}</div><div class="info-value">${value}</div></div>`
+    ).join('');
   }
 }
 
@@ -1198,9 +1214,13 @@ function selectBreakdownChip(key) {
   const scrollContainer = document.getElementById('breakdownScroll');
 
   // Update active chip
-  scrollContainer.querySelectorAll('.breakdown-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.key === key);
-  });
+  if (scrollContainer) {
+    scrollContainer.querySelectorAll('.breakdown-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.key === key);
+    });
+  }
+
+  if (!detailContainer) return;
 
   // Build detail content
   const s = item.score;

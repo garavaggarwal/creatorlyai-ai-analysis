@@ -131,6 +131,9 @@ async function fetchProfile(username) {
 }
 
 function renderProfile(p) {
+  // Cache profile for chatbot usage
+  localStorage.setItem('creatorly_last_profile', JSON.stringify(p));
+
   // Avatar — use proxy to bypass CORS, fallback to initial
   const avatar = document.getElementById('profileAvatar');
   const avatarFallback = document.getElementById('profileAvatarFallback');
@@ -243,6 +246,48 @@ function renderProfile(p) {
   ratioBadge.textContent = p.viewsToLikesRatio <= 12 ? 'Excellent' : p.viewsToLikesRatio <= 20 ? 'Average' : 'Low Likes';
   ratioBadge.className = 'badge ' + (p.viewsToLikesRatio <= 12 ? 'positive' : p.viewsToLikesRatio <= 20 ? 'warning' : 'low');
   document.getElementById('ratioComparison').textContent = `Views per Like (Niche Avg: 1 in 15)`;
+
+  // 4. Brand Rate Card calculations & binding
+  let minRate = Math.round(p.avgViews * 0.12 + (p.followersCount * (p.erByViews / 100)) * 1.0);
+  let maxRate = Math.round(p.avgViews * 0.30 + (p.followersCount * (p.erByViews / 100)) * 2.5);
+  
+  if (minRate < 1000) minRate = 1000;
+  if (maxRate < 2000) maxRate = 2000;
+
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  };
+  const collabRateRangeText = `${formatCurrency(minRate)} - ${formatCurrency(maxRate)}`;
+  
+  let tier = 'Nano Creator';
+  if (p.followersCount >= 1000000) {
+    tier = 'Mega Creator';
+  } else if (p.followersCount >= 500000) {
+    tier = 'Macro Creator';
+  } else if (p.followersCount >= 100000) {
+    tier = 'Mid-Tier Creator';
+  } else if (p.followersCount >= 10000) {
+    tier = 'Micro Creator';
+  }
+
+  document.getElementById('creatorTierValue').textContent = tier;
+  document.getElementById('collabRateRange').textContent = collabRateRangeText;
+  document.getElementById('collabRateDesc').textContent = `Based on average views of ${formatNum(p.avgViews)} and ER of ${p.erByViews}%.`;
+
+  // Bind ask AI buttons
+  document.getElementById('askAiErBtn').onclick = (e) => {
+    e.stopPropagation();
+    if (window.openCreatorlyChat) {
+      window.openCreatorlyChat(`My engagement rate is ${p.erByViews}%. Niche average is ${p.nicheBenchmark}%. Suggest 3 ways to improve engagement.`);
+    }
+  };
+
+  document.getElementById('askAiRateBtn').onclick = (e) => {
+    e.stopPropagation();
+    if (window.openCreatorlyChat) {
+      window.openCreatorlyChat(`My brand rates are calculated as ${collabRateRangeText}. How should I pitch this to brand sponsors?`);
+    }
+  };
 
   // ── Performance Averages (bind values) ──
   document.getElementById('avgViewsVal').textContent = formatNum(p.avgViews);
