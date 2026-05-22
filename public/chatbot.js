@@ -185,7 +185,7 @@
         display: none !important;
       }
       body.keyboard-open main.chat-main-container {
-        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
       }
     }
     
