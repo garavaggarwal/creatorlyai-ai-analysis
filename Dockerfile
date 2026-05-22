@@ -1,16 +1,20 @@
 # Use Node.js LTS slim base image
 FROM node:20-slim
 
-# Install system dependencies: ffmpeg, python3, python3-pip, curl
-RUN apt-get update && apt-get install -y \
+# Set non-interactive frontend
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies: ffmpeg, python3, curl, ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \
-    python3-pip \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp globally
-RUN pip3 install --no-cache-dir yt-dlp --break-system-packages || pip3 install --no-cache-dir yt-dlp || pip install --no-cache-dir yt-dlp || true
+# Download yt-dlp binary directly (much faster than installing pip and compiling/downloading pip packages)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
 
 # Set working directory
 WORKDIR /app
