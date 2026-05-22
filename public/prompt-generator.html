@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Creatorly AI — CreatorlyAI Strategist</title>
+  <title>Creatorly AI — Ask AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -16,8 +16,38 @@
       }
     }
   </script>
+  <style>
+    /* Premium Locked Layout for ChatGPT/Gemini-like Experience */
+    body {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100dvh !important;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Ensure chat container scrolls properly and doesn't get cut off by bottom nav */
+    main.chat-main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+    }
+    
+    @media (min-width: 1024px) {
+      main.chat-main-container {
+        padding-bottom: 0 !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-[#0f0f1a] text-slate-100 flex flex-col h-screen overflow-hidden m-0">
+<body class="bg-[#0f0f1a] text-slate-100 flex flex-col m-0">
 
   <!-- ── HEADER ── -->
   <header class="h-[56px] border-b border-solid border-[#2d2d44] flex items-center justify-between px-4 bg-[#0f0f1a] shrink-0 z-10">
@@ -38,7 +68,7 @@
   </header>
 
   <!-- ── CHAT CONTENT CONTAINER ── -->
-  <main class="flex-1 flex flex-col min-h-0 bg-[rgba(15,12,30,0.95)] max-w-[600px] w-full mx-auto border-x border-solid border-[rgba(255,255,255,0.08)]">
+  <main class="chat-main-container flex-1 flex flex-col min-h-0 bg-[rgba(15,12,30,0.95)] max-w-[600px] w-full mx-auto border-x border-solid border-[rgba(255,255,255,0.08)]">
     <!-- Messages Area -->
     <div class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 scroll-smooth" id="creatorlyChatMessages"></div>
 
@@ -63,7 +93,7 @@
     </a>
     <a href="/prompt-generator" class="bottom-nav-item active">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span>Chatbot</span>
+      <span>Ask AI</span>
     </a>
     <a href="/analyser" class="bottom-nav-item">
       <div class="nav-plus-btn">

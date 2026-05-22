@@ -178,6 +178,30 @@
       0%, 100% { opacity: 0; }
       50% { opacity: 1; }
     }
+
+    /* Mobile visual viewport adjustments */
+    @media (max-width: 1023px) {
+      body.keyboard-open .bottom-nav {
+        display: none !important;
+      }
+      body.keyboard-open main.chat-main-container {
+        padding-bottom: 0 !important;
+      }
+    }
+    
+    .chat-ul {
+      list-style-type: disc;
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+    .chat-ol {
+      list-style-type: decimal;
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+    .chat-ul li, .chat-ol li {
+      margin-bottom: 4px;
+    }
   `;
 
   let messagesContainer, chatForm, chatInput, chatSendBtn, chatClearBtn;
@@ -237,6 +261,23 @@
     }
   }
 
+  // Check 5-query session limit
+  function checkMessageLimit() {
+    const userMessageCount = state.messages.filter(m => m.role === 'user').length;
+    if (userMessageCount >= 5) {
+      chatInput.disabled = true;
+      chatSendBtn.disabled = true;
+      chatInput.placeholder = "Session limit reached (max 5 queries). Click 'Clear Chat' to reset.";
+      chatInput.value = "";
+      return true;
+    } else {
+      chatInput.disabled = false;
+      chatInput.placeholder = "Ask about hooks, rates, captions...";
+      chatSendBtn.disabled = !chatInput.value.trim();
+      return false;
+    }
+  }
+
   // Initialize and inject styles, mount event handlers
   function initChatbot() {
     console.log("[CreatorlyAI Chatbot] Initializing chatbot...");
@@ -262,7 +303,9 @@
 
     // Input state observer
     chatInput.addEventListener('input', () => {
-      chatSendBtn.disabled = !chatInput.value.trim();
+      if (state.messages.filter(m => m.role === 'user').length < 5) {
+        chatSendBtn.disabled = !chatInput.value.trim();
+      }
     });
 
     // Wiping Chat history
@@ -272,6 +315,7 @@
           state.messages = [];
           storage.removeItem('creatorly_chatbot_history');
           showFirstTimeGreeting();
+          checkMessageLimit();
         }
       });
     }
@@ -281,6 +325,11 @@
       e.preventDefault();
       const prompt = chatInput.value.trim();
       if (!prompt) return;
+
+      if (state.messages.filter(m => m.role === 'user').length >= 5) {
+        checkMessageLimit();
+        return;
+      }
 
       chatInput.value = '';
       chatSendBtn.disabled = true;
@@ -294,6 +343,34 @@
     } else {
       renderAllMessages();
     }
+
+    // Mobile Visual Viewport Handling for stable layout
+    if (window.visualViewport) {
+      const adjustViewport = () => {
+        const height = window.visualViewport.height;
+        document.body.style.height = `${height}px`;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      };
+      window.visualViewport.addEventListener('resize', adjustViewport);
+      window.visualViewport.addEventListener('scroll', adjustViewport);
+      adjustViewport();
+    }
+
+    // Hide bottom nav when input is focused to maximize space and dock input cleanly
+    chatInput.addEventListener('focus', () => {
+      document.body.classList.add('keyboard-open');
+      setTimeout(() => {
+        if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 100);
+    });
+    chatInput.addEventListener('blur', () => {
+      document.body.classList.remove('keyboard-open');
+    });
+
+    // Enforce initial check of query limits
+    checkMessageLimit();
 
     // Focus input
     setTimeout(() => chatInput.focus(), 300);
@@ -312,21 +389,20 @@
   // Calculate weakest metric and return targeted suggested prompt chips
   function getWeakestMetricPrompts(p) {
     const defaultPrompts = [
-      { text: "Calculate my collab rates based on views & engagement.", label: "Rate Card" },
-      { text: "Write high-converting captions matching my niche vibe.", label: "Caption Options" }
+      { text: "Suggest 3 ways to improve my profile's engagement.", label: "Engagement Ideas" },
+      { text: "How should I pitch to brand sponsors and determine my brand rates?", label: "Pitching Brands" }
     ];
 
     if (!p) {
       return [
-        { text: "What are 3 scroll-stopping hook templates for Reels?", label: "Hook Ideas" },
         { text: "How can I boost my engagement rate past 3%?", label: "Boost ER" },
+        { text: "Show me a content calendar to post more consistently.", label: "Content Plan" },
         ...defaultPrompts
       ];
     }
 
     // Benchmark targets
     const erRatio = (p.engagementRate || p.erByViews || 0) / 3.0; // Benchmark 3%
-    const hookRatio = (p.hookScore || 0) / 6.5; // Benchmark 6.5
     
     // Parse reels per week to a float
     let reelsNum = 0.5;
@@ -340,7 +416,6 @@
 
     const metrics = [
       { key: 'engagement', ratio: erRatio, label: 'Engagement Rate' },
-      { key: 'hook', ratio: hookRatio, label: 'Hook Score' },
       { key: 'consistency', ratio: consistencyRatio, label: 'Posting Consistency' }
     ];
 
@@ -349,12 +424,7 @@
     const weakest = metrics[0];
 
     let customPrompts = [];
-    if (weakest.key === 'hook') {
-      customPrompts = [
-        { text: "My hook score is low. Can you rewrite my latest reel hook to grab retention?", label: "Hook Rewrite" },
-        { text: "Give me 3 scroll-stopping hook templates for my niche.", label: "Hook Templates" }
-      ];
-    } else if (weakest.key === 'engagement') {
+    if (weakest.key === 'engagement') {
       customPrompts = [
         { text: "My engagement is below average. How can I get viewers to comment?", label: "Increase Comments" },
         { text: "What engagement hacks work best for Indian Instagram creators?", label: "ER Strategy" }
@@ -376,13 +446,18 @@
     const prompts = getWeakestMetricPrompts(p);
     
     const name = p ? p.fullName || p.username : 'Creator';
-    const weakLabel = p ? `Analyzing your profile metrics, we noticed your weakest link is **${getWeakestMetricPrompts(p)[0].label === 'Hook Rewrite' ? 'Hook Score' : getWeakestMetricPrompts(p)[0].label === 'Increase Comments' ? 'Engagement Rate' : 'Posting Consistency'}**.` : "Ready to plan your next growth move?";
+    let weakLabel = "Ready to plan your next growth move?";
+    if (p) {
+      const weakestLabel = prompts[0].label;
+      const metricName = weakestLabel === 'Increase Comments' ? 'Engagement Rate' : 'Posting Consistency';
+      weakLabel = `Analyzing your profile metrics, we noticed your weakest link is **${metricName}**.`;
+    }
 
     const greetingHTML = `
       <div class="creatorly-chat-greeting">
         <div class="creatorly-chat-greeting-title">Namaste, ${name}! 👋</div>
         <div class="creatorly-chat-greeting-desc">
-          I am CreatorlyAI, your personal Instagram growth strategist. ${weakLabel} Select a prompt below to get tailored recommendations:
+          I am Ask AI, your personal Instagram growth strategist. ${weakLabel} Select a prompt below to get tailored recommendations:
         </div>
         <div class="creatorly-chat-chips-grid" id="creatorlyGreetingChips"></div>
       </div>
@@ -443,10 +518,60 @@
     return bubble;
   }
 
-  // Parse basic bold markdown elements
+  // Parse basic bold markdown and lists
   function formatMarkdown(text) {
     if (!text) return '';
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Simple HTML escape
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Bold tags
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Lists parsing
+    const lines = html.split('\n');
+    let inList = false;
+    let listType = null; // 'ul' or 'ol'
+    const resultLines = [];
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      const ulMatch = trimmed.match(/^[\*\-]\s+(.*)$/);
+      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+
+      if (ulMatch) {
+        if (!inList || listType !== 'ul') {
+          if (inList) resultLines.push(`</${listType}>`);
+          resultLines.push('<ul class="chat-ul">');
+          inList = true;
+          listType = 'ul';
+        }
+        resultLines.push(`<li>${ulMatch[1]}</li>`);
+      } else if (olMatch) {
+        if (!inList || listType !== 'ol') {
+          if (inList) resultLines.push(`</${listType}>`);
+          resultLines.push('<ol class="chat-ol">');
+          inList = true;
+          listType = 'ol';
+        }
+        resultLines.push(`<li>${olMatch[2]}</li>`);
+      } else {
+        if (inList) {
+          resultLines.push(`</${listType}>`);
+          inList = false;
+          listType = null;
+        }
+        resultLines.push(line);
+      }
+    }
+    if (inList) {
+      resultLines.push(`</${listType}>`);
+    }
+
+    return resultLines.join('\n');
   }
 
   // Check text content and dynamically append specific visual metrics cards
@@ -472,23 +597,7 @@
       bubble.appendChild(card);
     }
 
-    // 2. Hook Score Card
-    if (lowercaseText.includes('hook score') || lowercaseText.includes(' hook ') || lowercaseText.includes('hooks')) {
-      const score = p.hookScore || 7.0;
-      const card = document.createElement('div');
-      card.className = 'creatorly-inline-card';
-      card.innerHTML = `
-        <div class="creatorly-inline-card-header">🪝 Content Rating: Hook Score</div>
-        <div class="creatorly-inline-card-value" style="color: ${score >= 7.5 ? '#22c55e' : score >= 5.5 ? '#eab308' : '#ef4444'};">${score}/10</div>
-        <div class="creatorly-inline-card-bar-bg">
-          <div class="creatorly-inline-card-bar-fill" style="width: ${score * 10}%; background: ${score >= 7.5 ? '#22c55e' : score >= 5.5 ? '#eab308' : '#ef4444'};"></div>
-        </div>
-        <div class="creatorly-inline-card-benchmark">Based on visual timing and retention markers</div>
-      `;
-      bubble.appendChild(card);
-    }
-
-    // 3. Consistency Card
+    // 2. Consistency Card
     if (lowercaseText.includes('consistency') || lowercaseText.includes('posting frequency') || lowercaseText.includes('frequency')) {
       let reelsNum = p.reelsPerWeek || 0;
       if (!reelsNum && p.postingFrequency) {
@@ -506,7 +615,7 @@
       bubble.appendChild(card);
     }
 
-    // 4. Brand Sponsorship Rates Card
+    // 3. Brand Sponsorship Rates Card
     if (lowercaseText.includes('brand rates') || lowercaseText.includes('collab rate') || lowercaseText.includes('sponsorship') || lowercaseText.includes(' rate ')) {
       let minRate = Math.round(p.avgViews * 0.12 + (p.followersCount * (p.erByViews / 100)) * 1.0);
       let maxRate = Math.round(p.avgViews * 0.30 + (p.followersCount * (p.erByViews / 100)) * 2.5);
@@ -541,9 +650,7 @@
     const lowercaseText = lastMessageText.toLowerCase();
     let choices = ["Analyze my profile.", "Best posting day?"];
 
-    if (lowercaseText.includes('hook') || lowercaseText.includes('retention')) {
-      choices = ["Give hook templates.", "Write script intro."];
-    } else if (lowercaseText.includes('rates') || lowercaseText.includes('brand') || lowercaseText.includes('collab')) {
+    if (lowercaseText.includes('rates') || lowercaseText.includes('brand') || lowercaseText.includes('collab')) {
       choices = ["How to pitch brands?", "Get negotiation tips."];
     } else if (lowercaseText.includes('caption') || lowercaseText.includes('tags')) {
       choices = ["Trending hashtags?", "Write hook options."];
@@ -620,6 +727,7 @@
       localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
 
       renderQuickReplies(fullResponse);
+      checkMessageLimit();
 
     } catch (err) {
       console.error('Chatbot SSE stream error:', err);
@@ -627,6 +735,7 @@
       streamBubble.innerHTML = errMsg;
       state.messages.push({ role: 'assistant', content: errMsg });
       localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
+      checkMessageLimit();
     }
   }
 

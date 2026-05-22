@@ -104,6 +104,20 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSidebarUser();
   renderNavProfilePic();
   fetchCredits();
+
+  // Navigate directly to history tab if loaded with #history hash
+  if (window.location.hash === '#history') {
+    navigateTo('history');
+  }
+
+  // Handle dynamically switching tabs when hash changes
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#history') {
+      navigateTo('history');
+    } else if (window.location.hash === '#analyse' || window.location.hash === '') {
+      navigateTo('analyse');
+    }
+  });
 });
 
 /* ── Show Instagram profile pic in bottom nav ── */
@@ -826,6 +840,14 @@ function showResults(results) {
   const main = document.querySelector('.main');
   if (hero) hero.hidden = false;
   if (main) main.hidden = false;
+
+  // Save latest analysis results so that Chatbot/Ask AI has access to it!
+  try {
+    localStorage.setItem('creatorly_last_analysis', JSON.stringify(results));
+  } catch (e) {
+    console.warn('Failed to save last analysis to localStorage:', e);
+  }
+
   renderResults(results);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -967,7 +989,7 @@ function renderResults(r) {
       let aiButtonHtml = '';
       if (c.key === 'hook') {
         aiButtonHtml = `
-          <button class="ask-ai-trigger-btn" onclick="window.openCreatorlyChat('My reel hook score is ' + ${s} + '/10. How can I improve this hook to hook viewers in the first 3 seconds?')">
+          <button class="ask-ai-trigger-btn" onclick="window.openCreatorlyChat('How can I improve my latest reel\\\'s hook?')">
             <span class="sparkle-icon">✨</span> Ask AI
           </button>
         `;
@@ -1110,11 +1132,7 @@ function renderResults(r) {
   const overallSummary = document.getElementById('overallSummary');
   if (overallSummary) overallSummary.textContent = r.overall_summary || '';
 
-  // Wins & Fixes
-  const winsList = document.getElementById('winsList');
-  if (winsList) renderList('winsList', r.top_3_wins || []);
-  const fixesList = document.getElementById('fixesList');
-  if (fixesList) renderList('fixesList', r.top_3_fixes || []);
+
 
   // Score breakdown — horizontally scrollable chips + detail card
   const breakdownKeys = [

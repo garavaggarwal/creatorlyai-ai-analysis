@@ -278,14 +278,14 @@ function renderProfile(p) {
   document.getElementById('askAiErBtn').onclick = (e) => {
     e.stopPropagation();
     if (window.openCreatorlyChat) {
-      window.openCreatorlyChat(`My engagement rate is ${p.erByViews}%. Niche average is ${p.nicheBenchmark}%. Suggest 3 ways to improve engagement.`);
+      window.openCreatorlyChat("Suggest 3 ways to improve my profile's engagement rate.");
     }
   };
 
   document.getElementById('askAiRateBtn').onclick = (e) => {
     e.stopPropagation();
     if (window.openCreatorlyChat) {
-      window.openCreatorlyChat(`My brand rates are calculated as ${collabRateRangeText}. How should I pitch this to brand sponsors?`);
+      window.openCreatorlyChat("How should I pitch to brand sponsors and determine my brand rates?");
     }
   };
 
