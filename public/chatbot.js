@@ -179,16 +179,7 @@
       50% { opacity: 1; }
     }
 
-    /* Mobile visual viewport adjustments */
-    @media (max-width: 1023px) {
-      body.keyboard-open .bottom-nav {
-        display: none !important;
-      }
-      body.keyboard-open main.chat-main-container {
-        margin-bottom: 0 !important;
-      }
-    }
-    
+    /* List styling */
     .chat-ul {
       list-style-type: disc;
       padding-left: 20px;
@@ -344,29 +335,46 @@
       renderAllMessages();
     }
 
-    // Mobile Visual Viewport Handling for stable layout
-    if (window.visualViewport) {
-      const adjustViewport = () => {
-        const height = window.visualViewport.height;
-        document.body.style.height = `${height}px`;
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Mobile Visual Viewport Handling — move input bar when keyboard opens
+    const inputBar = document.getElementById('chatInputBar');
+    if (window.visualViewport && inputBar) {
+      const adjustForKeyboard = () => {
+        const vv = window.visualViewport;
+        const windowHeight = window.innerHeight;
+        const viewportHeight = vv.height;
+        const keyboardHeight = windowHeight - viewportHeight - vv.offsetTop;
+        
+        if (keyboardHeight > 100) {
+          // Keyboard is open — lift input bar above keyboard
+          document.body.classList.add('keyboard-open');
+          inputBar.style.bottom = `${keyboardHeight + Math.max(0, vv.offsetTop)}px`;
+          // Adjust messages bottom accordingly
+          if (messagesContainer) {
+            const inputBarHeight = inputBar.offsetHeight || 68;
+            messagesContainer.style.bottom = `${keyboardHeight + inputBarHeight + Math.max(0, vv.offsetTop)}px`;
+            setTimeout(() => {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 50);
+          }
+        } else {
+          // Keyboard closed — reset to defaults (CSS handles it)
+          document.body.classList.remove('keyboard-open');
+          inputBar.style.bottom = '';
+          if (messagesContainer) {
+            messagesContainer.style.bottom = '';
+          }
         }
       };
-      window.visualViewport.addEventListener('resize', adjustViewport);
-      window.visualViewport.addEventListener('scroll', adjustViewport);
-      adjustViewport();
+
+      window.visualViewport.addEventListener('resize', adjustForKeyboard);
+      window.visualViewport.addEventListener('scroll', adjustForKeyboard);
     }
 
-    // Hide bottom nav when input is focused to maximize space and dock input cleanly
+    // Scroll to bottom on focus as well
     chatInput.addEventListener('focus', () => {
-      document.body.classList.add('keyboard-open');
       setTimeout(() => {
         if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }, 100);
-    });
-    chatInput.addEventListener('blur', () => {
-      document.body.classList.remove('keyboard-open');
+      }, 150);
     });
 
     // Enforce initial check of query limits
