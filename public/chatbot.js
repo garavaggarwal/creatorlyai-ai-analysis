@@ -252,13 +252,18 @@
     }
   }
 
-  // Check 5-query session limit
+  // Check session limit (unlimited for hrithikgarg2017@gmail.com, max 15 for others)
   function checkMessageLimit() {
+    const user = typeof getUser === 'function' ? getUser() : null;
+    const email = user ? user.email : '';
+    const isNoLimitUser = email && email.toLowerCase() === 'hrithikgarg2017@gmail.com';
+    const limit = 15;
+
     const userMessageCount = state.messages.filter(m => m.role === 'user').length;
-    if (userMessageCount >= 5) {
+    if (!isNoLimitUser && userMessageCount >= limit) {
       chatInput.disabled = true;
       chatSendBtn.disabled = true;
-      chatInput.placeholder = "Session limit reached (max 5 queries). Click 'Clear Chat' to reset.";
+      chatInput.placeholder = `Session limit reached (max ${limit} queries). Click 'Clear Chat' to reset.`;
       chatInput.value = "";
       return true;
     } else {
@@ -294,7 +299,11 @@
 
     // Input state observer
     chatInput.addEventListener('input', () => {
-      if (state.messages.filter(m => m.role === 'user').length < 5) {
+      const user = typeof getUser === 'function' ? getUser() : null;
+      const email = user ? user.email : '';
+      const isNoLimitUser = email && email.toLowerCase() === 'hrithikgarg2017@gmail.com';
+      const limit = 15;
+      if (isNoLimitUser || state.messages.filter(m => m.role === 'user').length < limit) {
         chatSendBtn.disabled = !chatInput.value.trim();
       }
     });
@@ -317,7 +326,11 @@
       const prompt = chatInput.value.trim();
       if (!prompt) return;
 
-      if (state.messages.filter(m => m.role === 'user').length >= 5) {
+      const user = typeof getUser === 'function' ? getUser() : null;
+      const email = user ? user.email : '';
+      const isNoLimitUser = email && email.toLowerCase() === 'hrithikgarg2017@gmail.com';
+      const limit = 15;
+      if (!isNoLimitUser && state.messages.filter(m => m.role === 'user').length >= limit) {
         checkMessageLimit();
         return;
       }
@@ -584,67 +597,8 @@
 
   // Check text content and dynamically append specific visual metrics cards
   function appendInlineCards(bubble, text) {
-    const lowercaseText = text.toLowerCase();
-    const p = getCreatorProfile();
-    if (!p) return;
-
-    // 1. Engagement Rate Card
-    if (lowercaseText.includes('engagement rate') || lowercaseText.includes('engagement') || lowercaseText.includes(' er ')) {
-      const erVal = p.engagementRate || p.erByViews || 0;
-      const benchmark = p.nicheBenchmark || 3.0;
-      const card = document.createElement('div');
-      card.className = 'creatorly-inline-card';
-      card.innerHTML = `
-        <div class="creatorly-inline-card-header">📊 Metric Insight: Engagement Rate</div>
-        <div class="creatorly-inline-card-value" style="color: ${erVal >= benchmark ? '#22c55e' : '#f97316'};">${erVal}%</div>
-        <div class="creatorly-inline-card-bar-bg">
-          <div class="creatorly-inline-card-bar-fill" style="width: ${Math.min((erVal / Math.max(erVal, benchmark)) * 100, 100)}%;"></div>
-        </div>
-        <div class="creatorly-inline-card-benchmark">Your ER vs Niche Average (${benchmark}%)</div>
-      `;
-      bubble.appendChild(card);
-    }
-
-    // 2. Consistency Card
-    if (lowercaseText.includes('consistency') || lowercaseText.includes('posting frequency') || lowercaseText.includes('frequency')) {
-      let reelsNum = p.reelsPerWeek || 0;
-      if (!reelsNum && p.postingFrequency) {
-        const match = p.postingFrequency.match(/[\d.]+/);
-        if (match) reelsNum = parseFloat(match[0]);
-      }
-      
-      const card = document.createElement('div');
-      card.className = 'creatorly-inline-card';
-      card.innerHTML = `
-        <div class="creatorly-inline-card-header">📅 Publishing Consistency</div>
-        <div class="creatorly-inline-card-value" style="color: ${reelsNum >= 3 ? '#22c55e' : '#eab308'};">${reelsNum >= 1 ? reelsNum.toFixed(1) + ' reels/wk' : 'Inactive'}</div>
-        <div class="creatorly-inline-card-benchmark">Niche Benchmark Recommendation: 3.0 per week</div>
-      `;
-      bubble.appendChild(card);
-    }
-
-    // 3. Brand Sponsorship Rates Card
-    if (lowercaseText.includes('brand rates') || lowercaseText.includes('collab rate') || lowercaseText.includes('sponsorship') || lowercaseText.includes(' rate ')) {
-      let minRate = Math.round(p.avgViews * 0.12 + (p.followersCount * (p.erByViews / 100)) * 1.0);
-      let maxRate = Math.round(p.avgViews * 0.30 + (p.followersCount * (p.erByViews / 100)) * 2.5);
-      
-      if (minRate < 1000) minRate = 1000;
-      if (maxRate < 2000) maxRate = 2000;
-
-      const formatCurrency = (val) => {
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
-      };
-      const rangeText = `${formatCurrency(minRate)} - ${formatCurrency(maxRate)}`;
-
-      const card = document.createElement('div');
-      card.className = 'creatorly-inline-card';
-      card.innerHTML = `
-        <div class="creatorly-inline-card-header">💳 Collaboration Valuation Range</div>
-        <div class="creatorly-inline-card-value">${rangeText}</div>
-        <div class="creatorly-inline-card-benchmark">Valuation based on ER (${p.erByViews || p.engagementRate}%) & views (${p.avgViews})</div>
-      `;
-      bubble.appendChild(card);
-    }
+    // Disabled per user request (no metric card overlays/images in response/input)
+    return;
   }
 
   // Quick reply chip suggestions
@@ -687,6 +641,37 @@
     state.messages.push({ role: 'user', content: promptText });
     localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
     
+    // Check if the user is asking about rates/pricing/valuation/sponsorships
+    const lowercasePrompt = promptText.toLowerCase().trim();
+    const isRatesQuery = 
+      (lowercasePrompt.includes('rate') && (lowercasePrompt.includes('brand') || lowercasePrompt.includes('collab') || lowercasePrompt.includes('my') || lowercasePrompt.includes('sponsor') || lowercasePrompt.includes('charge') || lowercasePrompt.includes('creator') || lowercasePrompt.includes('est') || lowercasePrompt.includes('estimated'))) ||
+      lowercasePrompt.includes('how much should i charge') ||
+      lowercasePrompt.includes('what is my valuation') ||
+      lowercasePrompt.includes('how much to charge') ||
+      lowercasePrompt.includes('brand valuation') ||
+      lowercasePrompt.includes('brand rates') ||
+      lowercasePrompt.includes('collab rate') ||
+      lowercasePrompt.includes('sponsorship rate') ||
+      lowercasePrompt.includes('collab valuation') ||
+      lowercasePrompt.includes('how much i should charge') ||
+      lowercasePrompt.includes('how much money can i make') ||
+      lowercasePrompt.includes('earnings') ||
+      lowercasePrompt.includes('pricing') ||
+      lowercasePrompt.includes('worth');
+
+    if (isRatesQuery) {
+      setTimeout(() => {
+        const streamBubble = appendMessageBubble('assistant', '', true);
+        const staticReply = "Please check your profile page to generate your brand rate card.";
+        streamBubble.innerHTML = formatMarkdown(staticReply);
+        state.messages.push({ role: 'assistant', content: staticReply });
+        localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));
+        renderQuickReplies(staticReply);
+        checkMessageLimit();
+      }, 500);
+      return;
+    }
+
     streamAIResponse();
   }
 

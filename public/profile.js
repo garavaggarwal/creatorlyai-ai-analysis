@@ -274,6 +274,92 @@ function renderProfile(p) {
   document.getElementById('collabRateRange').textContent = collabRateRangeText;
   document.getElementById('collabRateDesc').textContent = `Based on average views of ${formatNum(p.avgViews)} and ER of ${p.erByViews}%.`;
 
+  // Inject spin keyframes style
+  if (!document.getElementById('rate-card-animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'rate-card-animation-styles';
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Handle rate card blur/unlock
+  const rateCardOverlay = document.getElementById('rateCardOverlay');
+  const rateCardContent = document.getElementById('rateCardContent');
+  const generateRateCardBtn = document.getElementById('generateRateCardBtn');
+
+  const unlockedKey = 'creatorly_rate_card_unlocked_' + p.username;
+  const isUnlocked = localStorage.getItem(unlockedKey) === 'true';
+  
+  // Check URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const triggerFromUrl = urlParams.get('generateRateCard') === 'true';
+
+  function unlockRateCard(animate = false) {
+    if (animate) {
+      generateRateCardBtn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Calculating Worth...';
+      generateRateCardBtn.disabled = true;
+      setTimeout(() => {
+        if (rateCardOverlay) {
+          rateCardOverlay.style.opacity = '0';
+          rateCardOverlay.style.pointerEvents = 'none';
+        }
+        if (rateCardContent) {
+          rateCardContent.style.filter = 'none';
+          rateCardContent.style.pointerEvents = 'auto';
+          rateCardContent.style.opacity = '1';
+        }
+        localStorage.setItem(unlockedKey, 'true');
+        setTimeout(() => {
+          if (rateCardOverlay) rateCardOverlay.style.display = 'none';
+        }, 400);
+      }, 1000);
+    } else {
+      if (rateCardOverlay) rateCardOverlay.style.display = 'none';
+      if (rateCardContent) {
+        rateCardContent.style.filter = 'none';
+        rateCardContent.style.pointerEvents = 'auto';
+        rateCardContent.style.opacity = '1';
+      }
+      localStorage.setItem(unlockedKey, 'true');
+    }
+  }
+
+  // Set up generate click listener
+  if (generateRateCardBtn) {
+    generateRateCardBtn.onclick = () => {
+      unlockRateCard(true);
+    };
+  }
+
+  if (isUnlocked || triggerFromUrl) {
+    unlockRateCard(triggerFromUrl && !isUnlocked);
+    if (triggerFromUrl) {
+      // Clear URL parameter so it doesn't trigger again on reload
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  } else {
+    // Keep locked
+    if (rateCardOverlay) {
+      rateCardOverlay.style.display = 'flex';
+      rateCardOverlay.style.opacity = '1';
+      rateCardOverlay.style.pointerEvents = 'auto';
+    }
+    if (rateCardContent) {
+      rateCardContent.style.filter = 'blur(10px)';
+      rateCardContent.style.pointerEvents = 'none';
+      rateCardContent.style.opacity = '0.2';
+    }
+    if (generateRateCardBtn) {
+      generateRateCardBtn.innerHTML = '✨ Generate My Rate Card';
+      generateRateCardBtn.disabled = false;
+    }
+  }
+
   // Bind ask AI buttons
   document.getElementById('askAiErBtn').onclick = (e) => {
     e.stopPropagation();

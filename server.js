@@ -1581,7 +1581,7 @@ Rules:
 - End every response with a distinct, bolded **Next Action:** followed by one concrete, actionable step.
 - DO NOT calculate or reference hook scores in your strategy or advice. Keep hook scores completely out of the conversation.
 - If asked about captions or video ideas, list standard options using clean numbers or bullet points on separate lines.
-- If asked about brand rates, calculate standard/premium rates using their actual engagement rate and average views using a clear valuation range.
+- NEVER reveal, calculate, or estimate the creator's brand rates or collab rate values in response. If asked about brand rates, pricing, valuation, or how much they should charge, respond exactly: "Please check your profile page to generate your brand rate card."
 - If data is unavailable, answer from general creator benchmarks but clearly flag that it is not based on their personal account stats.`;
 
     const contents = [];

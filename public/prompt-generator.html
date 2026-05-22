@@ -88,7 +88,7 @@
       top: 56px;      /* below header */
       left: 0;
       right: 0;
-      bottom: calc(72px + 64px + env(safe-area-inset-bottom)); /* above input + bottom nav */
+      bottom: calc(148px + env(safe-area-inset-bottom)); /* above input + bottom nav with safe spacing */
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -106,12 +106,12 @@
       position: fixed;
       left: 0;
       right: 0;
-      z-index: 200;
+      z-index: 600; /* Ensure z-index is above bottom nav */
       background: rgba(12, 11, 24, 0.97);
       backdrop-filter: blur(16px);
       border-top: 1px solid rgba(255,255,255,0.07);
       padding: 10px 16px;
-      bottom: calc(60px + env(safe-area-inset-bottom)); /* sit on top of bottom nav */
+      bottom: calc(76px + env(safe-area-inset-bottom)); /* sit cleanly above bottom nav */
     }
 
     /* When keyboard is open (body.keyboard-open), bottom nav hides
@@ -121,7 +121,7 @@
     }
 
     body.keyboard-open #creatorlyChatMessages {
-      bottom: calc(64px + env(safe-area-inset-bottom));
+      bottom: calc(72px + env(safe-area-inset-bottom));
     }
 
     /* Desktop: no bottom nav */
@@ -200,7 +200,11 @@
 
     /* ── Bottom Nav override for Ask AI page ── */
     .bottom-nav {
-      z-index: 100; /* below chat input bar */
+      z-index: 500;
+    }
+
+    body.keyboard-open .bottom-nav {
+      display: none !important;
     }
 
     /* On desktop, hide bottom nav */
