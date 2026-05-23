@@ -84,6 +84,14 @@
       "dest": "/public/profile.js"
     },
     {
+      "src": "/rate-card.css",
+      "dest": "/public/rate-card.css"
+    },
+    {
+      "src": "/rate-card.js",
+      "dest": "/public/rate-card.js"
+    },
+    {
       "src": "/",
       "dest": "/public/landing.html"
     }
