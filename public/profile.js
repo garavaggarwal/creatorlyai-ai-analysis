@@ -247,132 +247,128 @@ function renderProfile(p) {
   ratioBadge.className = 'badge ' + (p.viewsToLikesRatio <= 12 ? 'positive' : p.viewsToLikesRatio <= 20 ? 'warning' : 'low');
   document.getElementById('ratioComparison').textContent = `Views per Like (Niche Avg: 1 in 15)`;
 
-  // 4. Brand Rate Card calculations & binding
-  let minRate = Math.round(p.avgViews * 0.12 + (p.followersCount * (p.erByViews / 100)) * 1.0);
-  let maxRate = Math.round(p.avgViews * 0.30 + (p.followersCount * (p.erByViews / 100)) * 2.5);
-  
-  if (minRate < 1000) minRate = 1000;
-  if (maxRate < 2000) maxRate = 2000;
+  // ── 4. Brand Rate Card – Multi-format calculations ──
+  const reelMin = Math.round(p.avgViews * 0.12 + (p.followersCount * (p.erByViews / 100)) * 1.0);
+  const reelMax = Math.round(p.avgViews * 0.30 + (p.followersCount * (p.erByViews / 100)) * 2.5);
 
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  const rates = {
+    reel:     { min: Math.max(reelMin, 1000),         max: Math.max(reelMax, 2000) },
+    story:    { min: Math.max(Math.round(reelMin * 0.42), 400),   max: Math.max(Math.round(reelMax * 0.55), 800) },
+    post:     { min: Math.max(Math.round(reelMin * 0.65), 700),   max: Math.max(Math.round(reelMax * 0.75), 1500) },
+    carousel: { min: Math.max(Math.round(reelMin * 0.80), 900),   max: Math.max(Math.round(reelMax * 0.90), 1800) },
   };
-  const collabRateRangeText = `${formatCurrency(minRate)} - ${formatCurrency(maxRate)}`;
-  
+  // Bundle = Story + Reel + Post with a small volume discount (~10%)
+  rates.bundle = {
+    min: Math.round((rates.story.min + rates.reel.min + rates.post.min) * 0.9),
+    max: Math.round((rates.story.max + rates.reel.max + rates.post.max) * 0.9),
+  };
+
+  const formatCurrency = (val) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  const fmtRange = (r) => `${formatCurrency(r.min)} – ${formatCurrency(r.max)}`;
+
   let tier = 'Nano Creator';
-  if (p.followersCount >= 1000000) {
-    tier = 'Mega Creator';
-  } else if (p.followersCount >= 500000) {
-    tier = 'Macro Creator';
-  } else if (p.followersCount >= 100000) {
-    tier = 'Mid-Tier Creator';
-  } else if (p.followersCount >= 10000) {
-    tier = 'Micro Creator';
-  }
+  if (p.followersCount >= 1000000) tier = 'Mega Creator';
+  else if (p.followersCount >= 500000) tier = 'Macro Creator';
+  else if (p.followersCount >= 100000) tier = 'Mid-Tier Creator';
+  else if (p.followersCount >= 10000)  tier = 'Micro Creator';
 
+  // Bind values to new multi-format elements
   document.getElementById('creatorTierValue').textContent = tier;
-  document.getElementById('collabRateRange').textContent = collabRateRangeText;
-  document.getElementById('collabRateDesc').textContent = `Based on average views of ${formatNum(p.avgViews)} and ER of ${p.erByViews}%.`;
+  document.getElementById('rateCardBasedOn').textContent = `${formatNum(p.followersCount)} followers · ${p.erByViews}% ER`;
+  document.getElementById('rateReel').textContent = fmtRange(rates.reel);
+  document.getElementById('rateStory').textContent = fmtRange(rates.story);
+  document.getElementById('ratePost').textContent = fmtRange(rates.post);
+  document.getElementById('rateCarousel').textContent = fmtRange(rates.carousel);
+  document.getElementById('rateBundle').textContent = fmtRange(rates.bundle);
+  document.getElementById('collabRateDesc').textContent =
+    `Valuation based on avg. ${formatNum(p.avgViews)} views/reel and ${p.erByViews}% engagement rate.`;
 
-  // Inject spin keyframes style
+  // ── Spin keyframe ──
   if (!document.getElementById('rate-card-animation-styles')) {
     const style = document.createElement('style');
     style.id = 'rate-card-animation-styles';
-    style.textContent = `
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `;
+    style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
     document.head.appendChild(style);
   }
 
-  // Handle rate card blur/unlock
-  const rateCardOverlay = document.getElementById('rateCardOverlay');
-  const rateCardContent = document.getElementById('rateCardContent');
+  // ── Rate card overlay/unlock DOM refs ──
+  const rateCardOverlay   = document.getElementById('rateCardOverlay');
+  const rateCardContent   = document.getElementById('rateCardContent');
   const generateRateCardBtn = document.getElementById('generateRateCardBtn');
+  const sharePdfBtn       = document.getElementById('sharePdfBtn');
 
   const unlockedKey = 'creatorly_rate_card_unlocked_' + p.username;
-  const isUnlocked = localStorage.getItem(unlockedKey) === 'true';
-  
-  // Check URL parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const triggerFromUrl = urlParams.get('generateRateCard') === 'true';
+  const isUnlocked  = localStorage.getItem(unlockedKey) === 'true';
+
+  const urlParams       = new URLSearchParams(window.location.search);
+  const triggerFromUrl  = urlParams.get('generateRateCard') === 'true';
+
+  // ── Enable Share PDF button after unlock ──
+  function enableShareBtn() {
+    if (!sharePdfBtn) return;
+    sharePdfBtn.style.cursor       = 'pointer';
+    sharePdfBtn.style.color        = '#a5b4fc';
+    sharePdfBtn.style.borderColor  = 'rgba(168,85,247,0.35)';
+    sharePdfBtn.style.background   = 'rgba(168,85,247,0.06)';
+    sharePdfBtn.removeAttribute('title');
+    sharePdfBtn.onclick = () => generateAndSharePdf(p, rates, tier, fmtRange, formatCurrency);
+  }
 
   function unlockRateCard(animate = false) {
     if (animate) {
-      generateRateCardBtn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Calculating Worth...';
+      generateRateCardBtn.innerHTML = '<span style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Calculating Worth...';
       generateRateCardBtn.disabled = true;
       setTimeout(() => {
-        if (rateCardOverlay) {
-          rateCardOverlay.style.opacity = '0';
-          rateCardOverlay.style.pointerEvents = 'none';
-        }
-        if (rateCardContent) {
-          rateCardContent.style.filter = 'none';
-          rateCardContent.style.pointerEvents = 'auto';
-          rateCardContent.style.opacity = '1';
-        }
+        if (rateCardOverlay) { rateCardOverlay.style.opacity = '0'; rateCardOverlay.style.pointerEvents = 'none'; }
+        if (rateCardContent) { rateCardContent.style.filter = 'none'; rateCardContent.style.pointerEvents = 'auto'; rateCardContent.style.opacity = '1'; }
         localStorage.setItem(unlockedKey, 'true');
-        setTimeout(() => {
-          if (rateCardOverlay) rateCardOverlay.style.display = 'none';
-        }, 400);
-      }, 1000);
+        enableShareBtn();
+        setTimeout(() => { if (rateCardOverlay) rateCardOverlay.style.display = 'none'; }, 420);
+      }, 1100);
     } else {
       if (rateCardOverlay) rateCardOverlay.style.display = 'none';
-      if (rateCardContent) {
-        rateCardContent.style.filter = 'none';
-        rateCardContent.style.pointerEvents = 'auto';
-        rateCardContent.style.opacity = '1';
-      }
+      if (rateCardContent) { rateCardContent.style.filter = 'none'; rateCardContent.style.pointerEvents = 'auto'; rateCardContent.style.opacity = '1'; }
       localStorage.setItem(unlockedKey, 'true');
+      enableShareBtn();
     }
   }
 
-  // Set up generate click listener
   if (generateRateCardBtn) {
-    generateRateCardBtn.onclick = () => {
-      unlockRateCard(true);
-    };
+    generateRateCardBtn.onclick = () => unlockRateCard(true);
   }
 
   if (isUnlocked || triggerFromUrl) {
     unlockRateCard(triggerFromUrl && !isUnlocked);
     if (triggerFromUrl) {
-      // Clear URL parameter so it doesn't trigger again on reload
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   } else {
-    // Keep locked
-    if (rateCardOverlay) {
-      rateCardOverlay.style.display = 'flex';
-      rateCardOverlay.style.opacity = '1';
-      rateCardOverlay.style.pointerEvents = 'auto';
-    }
-    if (rateCardContent) {
-      rateCardContent.style.filter = 'blur(10px)';
-      rateCardContent.style.pointerEvents = 'none';
-      rateCardContent.style.opacity = '0.2';
-    }
-    if (generateRateCardBtn) {
-      generateRateCardBtn.innerHTML = '✨ Generate My Rate Card';
-      generateRateCardBtn.disabled = false;
+    if (rateCardOverlay) { rateCardOverlay.style.display = 'flex'; rateCardOverlay.style.opacity = '1'; rateCardOverlay.style.pointerEvents = 'auto'; }
+    if (rateCardContent) { rateCardContent.style.filter = 'blur(14px)'; rateCardContent.style.pointerEvents = 'none'; rateCardContent.style.opacity = '0.12'; }
+    if (generateRateCardBtn) { generateRateCardBtn.innerHTML = '✨ Generate My Rate Card'; generateRateCardBtn.disabled = false; }
+    // Share button stays disabled until rate card generated
+    if (sharePdfBtn) {
+      sharePdfBtn.title = 'Generate Rate Card first to unlock sharing';
+      sharePdfBtn.onclick = (e) => {
+        e.stopPropagation();
+        sharePdfBtn.textContent = '⚠ Generate Rate Card first';
+        setTimeout(() => {
+          sharePdfBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share PDF';
+        }, 2500);
+      };
     }
   }
 
-  // Bind ask AI buttons
+  // ── Ask AI buttons ──
   document.getElementById('askAiErBtn').onclick = (e) => {
     e.stopPropagation();
-    if (window.openCreatorlyChat) {
-      window.openCreatorlyChat("Suggest 3 ways to improve my profile's engagement rate.");
-    }
+    if (window.openCreatorlyChat) window.openCreatorlyChat("Suggest 3 ways to improve my profile's engagement rate.");
   };
 
   document.getElementById('askAiRateBtn').onclick = (e) => {
     e.stopPropagation();
-    if (window.openCreatorlyChat) {
-      window.openCreatorlyChat("How should I pitch to brand sponsors and determine my brand rates?");
-    }
+    if (window.openCreatorlyChat) window.openCreatorlyChat("How should I pitch to brand sponsors and determine my brand rates?");
   };
 
   // ── Performance Averages (bind values) ──
@@ -491,4 +487,171 @@ function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
   return n.toString();
+}
+
+// ── PDF Generation / Share ──
+function generateAndSharePdf(p, rates, tier, fmtRange, formatCurrency) {
+  const btn = document.getElementById('sharePdfBtn');
+  if (btn) {
+    btn.style.opacity = '0.7';
+    btn.style.pointerEvents = 'none';
+    btn.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border:2px solid #a5b4fc;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:5px;vertical-align:middle;"></span> Generating…`;
+  }
+
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const fmtN  = (n) => {
+    if (!n || n === 0) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
+  };
+
+  const pdfEl = document.getElementById('profilePdfCard');
+  if (!pdfEl) return;
+
+  pdfEl.innerHTML = `
+    <div style="background:#fff;color:#0f0a1a;font-family:'Inter',sans-serif;padding:0;max-width:794px;">
+
+      <!-- Header Band -->
+      <div style="background:linear-gradient(135deg,#a855f7,#6366f1);padding:28px 36px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:1.4rem;font-weight:900;color:#fff;letter-spacing:-0.03em;">Creatorly AI</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-top:2px;letter-spacing:0.04em;">CREATOR MEDIA KIT</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.7);">Generated ${today}</div>
+          <div style="font-size:0.78rem;font-weight:700;color:#fff;margin-top:3px;">@${p.username}</div>
+        </div>
+      </div>
+
+      <!-- Profile Info -->
+      <div style="padding:28px 36px 20px;border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:1.4rem;font-weight:900;color:#1e1b4b;letter-spacing:-0.02em;">${p.fullName || p.username}</div>
+            <div style="font-size:0.85rem;color:#6366f1;font-weight:600;margin-top:2px;">@${p.username}${p.isVerified ? ' ✓' : ''}</div>
+            ${p.biography ? `<div style="font-size:0.78rem;color:#475569;margin-top:8px;line-height:1.55;max-width:420px;">${p.biography}</div>` : ''}
+            ${p.niche && p.niche !== 'General' ? `<div style="display:inline-block;margin-top:10px;padding:3px 10px;background:#f3f0ff;color:#7c3aed;border-radius:99px;font-size:0.7rem;font-weight:700;">${p.niche}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:20px;flex-shrink:0;">
+            <div style="text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:#1e1b4b;">${fmtN(p.followersCount)}</div>
+              <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Followers</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:#1e1b4b;">${p.erByViews}%</div>
+              <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Eng. Rate</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:#1e1b4b;">${fmtN(p.avgViews)}</div>
+              <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Avg Views</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Metrics Grid -->
+      <div style="padding:22px 36px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:0.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:14px;">Performance Metrics</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          ${[
+            { label:'Total Posts', value: fmtN(p.postsCount) },
+            { label:'Avg Likes',   value: fmtN(p.avgLikes) },
+            { label:'Avg Comments',value: fmtN(p.avgComments) },
+            { label:'Creatorly Score', value: (p.creatorlyScore || 70) + '%' },
+          ].map(m => `
+            <div style="background:#f8f9fc;border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:1.2rem;font-weight:800;color:#1e1b4b;">${m.value}</div>
+              <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">${m.label}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Rate Card -->
+      <div style="padding:22px 36px;border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:0.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">Brand Collaboration Rate Card</div>
+            <div style="font-size:1rem;font-weight:800;color:#7c3aed;margin-top:3px;">${tier}</div>
+          </div>
+          <div style="font-size:0.7rem;color:#64748b;">AI Valuation · ${today}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${[
+            { icon:'🎥', label:'Reel',            sub:'Short-form video',     rate: fmtRange(rates.reel),     color:'#7c3aed' },
+            { icon:'📖', label:'Story',           sub:'Frame/swipe-set · 24h', rate: fmtRange(rates.story),    color:'#4f46e5' },
+            { icon:'🖼️', label:'Feed Post',        sub:'Static image · Permanent', rate: fmtRange(rates.post), color:'#16a34a' },
+            { icon:'🎠', label:'Carousel Post',    sub:'Multi-slide · Permanent', rate: fmtRange(rates.carousel), color:'#d97706' },
+            { icon:'💼', label:'Bundle Package',   sub:'Story + Reel + Post',  rate: fmtRange(rates.bundle),  color:'#059669', highlight: true },
+          ].map(r => `
+            <div style="display:flex;align-items:center;gap:14px;padding:11px 14px;background:${r.highlight ? '#f0fdf4' : '#f8f9fc'};border-radius:10px;border:1px solid ${r.highlight ? '#bbf7d0' : '#e2e8f0'};">
+              <div style="font-size:1.1rem;width:32px;text-align:center;">${r.icon}</div>
+              <div style="flex:1;">
+                <div style="font-size:0.83rem;font-weight:700;color:#1e1b4b;">${r.label}${r.highlight ? ' <span style="font-size:0.6rem;color:#059669;font-weight:800;background:#d1fae5;padding:1px 6px;border-radius:99px;">Best Value</span>' : ''}</div>
+                <div style="font-size:0.62rem;color:#94a3b8;">${r.sub}</div>
+              </div>
+              <div style="font-size:0.88rem;font-weight:800;color:${r.color};white-space:nowrap;">${r.rate}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Posting Benchmarks -->
+      <div style="padding:22px 36px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:0.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:14px;">Benchmarks & Posting</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="background:#f8f9fc;border-radius:10px;padding:12px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Niche ER Benchmark</div>
+            <div style="font-size:0.95rem;font-weight:800;color:#1e1b4b;">${p.erByViews}% vs ${p.nicheBenchmark}% avg</div>
+            <div style="font-size:0.62rem;color:${p.erByViews >= p.nicheBenchmark ? '#16a34a' : '#dc2626'};font-weight:600;margin-top:3px;">${p.erByViews >= p.nicheBenchmark ? '▲ Above average' : '▼ Below average'}</div>
+          </div>
+          <div style="background:#f8f9fc;border-radius:10px;padding:12px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Best Time to Post</div>
+            <div style="font-size:0.95rem;font-weight:800;color:#1e1b4b;">${p.optimalTime ? p.optimalTime.day + 's @ ' + p.optimalTime.time : '--'}</div>
+            <div style="font-size:0.62rem;color:#64748b;margin-top:3px;">Based on reel performance</div>
+          </div>
+          <div style="background:#f8f9fc;border-radius:10px;padding:12px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Posting Frequency</div>
+            <div style="font-size:0.95rem;font-weight:800;color:#1e1b4b;">${p.reelsPerWeek || 0} reels/wk</div>
+            <div style="font-size:0.62rem;color:${(p.reelsPerWeek||0) >= 3 ? '#16a34a' : '#d97706'};font-weight:600;margin-top:3px;">${(p.reelsPerWeek||0) >= 3 ? '✓ Consistent' : 'Niche avg: 3/wk'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:18px 36px;background:#f8f9fc;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:0.7rem;font-weight:700;color:#7c3aed;">Creatorly AI</div>
+        <div style="font-size:0.65rem;color:#94a3b8;">This rate card is AI-generated and for indicative purposes only · ${today}</div>
+      </div>
+    </div>
+  `;
+
+  // Trigger html2pdf
+  const opt = {
+    margin:      [0, 0, 0, 0],
+    filename:    `${p.username}_media_kit_${today.replace(/ /g,'_')}.pdf`,
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:   { mode: 'avoid-all' },
+  };
+
+  if (typeof html2pdf !== 'undefined') {
+    html2pdf().set(opt).from(pdfEl).save().then(() => {
+      if (btn) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share PDF`;
+      }
+    });
+  } else {
+    console.warn('[CreatorlyAI] html2pdf not loaded yet.');
+    if (btn) {
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share PDF`;
+    }
+    alert('PDF library still loading — try again in a moment.');
+  }
 }
