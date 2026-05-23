@@ -36,6 +36,10 @@
       "dest": "/public/profile.html"
     },
     {
+      "src": "/rate-card",
+      "dest": "/public/rate-card.html"
+    },
+    {
       "src": "/style.css",
       "dest": "/public/style.css"
     },

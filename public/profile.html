@@ -13,7 +13,7 @@
   <script>
     tailwind.config = { corePlugins: { preflight: false } }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 </head>
 <body>
 
@@ -143,116 +143,7 @@
         <div class="profile-stats-row" id="profileStatsRow"></div>
       </div>
 
-      <!-- ── BRAND COLLABORATION RATE CARD (Multi-format, Premium) ── -->
-      <div class="card rate-card" id="brandRateCard" style="margin-top: 24px; position: relative; overflow: hidden; border: 1px solid rgba(168,85,247,0.3); background: linear-gradient(145deg, rgba(20,18,38,0.98), rgba(12,11,24,0.99)); box-shadow: 0 16px 48px rgba(0,0,0,0.6); border-radius: 22px; transition: all 0.3s ease;">
 
-        <!-- Overlay for Generate CTA -->
-        <div id="rateCardOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(8,6,20,0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); padding: 28px; text-align: center; transition: opacity 0.4s ease;">
-          <div style="font-size: 2.4rem; margin-bottom: 14px; filter: drop-shadow(0 0 18px rgba(168,85,247,0.8));">✨</div>
-          <h4 style="margin: 0 0 8px 0; font-size: 1.2rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Brand Collaboration Rate Card</h4>
-          <p style="margin: 0 0 6px 0; font-size: 0.82rem; color: #94a3b8; max-width: 300px; line-height: 1.55;">Personalised rates for Stories, Reels, Posts, Carousels & Bundles — from live benchmarks.</p>
-          <p style="margin: 0 0 22px 0; font-size: 0.72rem; color: #64748b;">One-time generation. Saved to your profile.</p>
-          <button class="btn btn-primary" id="generateRateCardBtn" style="padding: 13px 32px; font-size: 0.9rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 28px rgba(168,85,247,0.45); transition: transform 0.2s, box-shadow 0.2s; font-family: inherit;">
-            ✨ Generate My Rate Card
-          </button>
-        </div>
-
-        <!-- Rate Card Content (blurred until unlocked) -->
-        <div id="rateCardContent" style="transition: filter 0.5s ease, opacity 0.5s ease; filter: blur(14px); pointer-events: none; opacity: 0.12; padding: 26px;">
-
-          <!-- Card Header -->
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(99,102,241,0.2)); border: 1px solid rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">💳</div>
-              <div>
-                <h3 style="margin: 0; font-size: 1rem; color: #fff; font-weight: 800; letter-spacing: -0.01em;">Brand Collaboration Rate Card</h3>
-                <p style="margin: 3px 0 0 0; font-size: 0.68rem; color: #64748b;">AI-generated valuation · Based on live metrics</p>
-              </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-              <!-- Share PDF Button — always visible, gated by unlock state -->
-              <button id="sharePdfBtn" style="display: flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); color: #64748b; background: rgba(255,255,255,0.03); cursor: not-allowed; font-weight: 600; transition: all 0.25s; font-family: inherit;" title="Generate Rate Card first">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Share PDF
-              </button>
-              <button class="btn btn-sm btn-outline ask-ai-btn" id="askAiRateBtn" style="display: flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(168,85,247,0.4); color: #c084fc; background: rgba(168,85,247,0.05); cursor: pointer; font-weight: 600; transition: all 0.2s; font-family: inherit;">
-                <span>✨</span> Ask AI
-              </button>
-            </div>
-          </div>
-
-          <!-- Creator Tier Banner -->
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 11px 14px; background: rgba(168,85,247,0.06); border-radius: 12px; border: 1px solid rgba(168,85,247,0.13);">
-            <span style="font-size: 1.2rem;">👑</span>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; margin-bottom: 2px;">Creator Tier</div>
-              <div id="creatorTierValue" style="font-size: 1rem; font-weight: 800; background: linear-gradient(135deg, #a855f7, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">--</div>
-            </div>
-            <div style="text-align: right; flex-shrink: 0;">
-              <div style="font-size: 0.62rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px;">Based on</div>
-              <div id="rateCardBasedOn" style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">-- · --</div>
-            </div>
-          </div>
-
-          <!-- Per-Format Rate Rows -->
-          <div style="margin-bottom: 8px; font-size: 0.62rem; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; padding: 0 2px;">Estimated Rates per Placement</div>
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
-
-            <!-- Reel -->
-            <div style="display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: 13px 14px; background: rgba(168,85,247,0.06); border-radius: 13px; border: 1px solid rgba(168,85,247,0.16);">
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(168,85,247,0.13); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">🎥</div>
-              <div>
-                <div style="font-size: 0.83rem; font-weight: 700; color: #fff; margin-bottom: 2px;">Reel</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Short-form video · 15–90 sec</div>
-              </div>
-              <div id="rateReel" style="font-size: 0.95rem; font-weight: 800; color: #c084fc; text-align: right; white-space: nowrap;">--</div>
-            </div>
-
-            <!-- Story -->
-            <div style="display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: 13px 14px; background: rgba(99,102,241,0.05); border-radius: 13px; border: 1px solid rgba(99,102,241,0.13);">
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99,102,241,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">📖</div>
-              <div>
-                <div style="font-size: 0.83rem; font-weight: 700; color: #fff; margin-bottom: 2px;">Story</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Single frame or swipe-set · 24h</div>
-              </div>
-              <div id="rateStory" style="font-size: 0.95rem; font-weight: 800; color: #818cf8; text-align: right; white-space: nowrap;">--</div>
-            </div>
-
-            <!-- Feed Post -->
-            <div style="display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: 13px 14px; background: rgba(34,197,94,0.03); border-radius: 13px; border: 1px solid rgba(34,197,94,0.12);">
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(34,197,94,0.09); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">🖼️</div>
-              <div>
-                <div style="font-size: 0.83rem; font-weight: 700; color: #fff; margin-bottom: 2px;">Feed Post</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Static image · Permanent feed</div>
-              </div>
-              <div id="ratePost" style="font-size: 0.95rem; font-weight: 800; color: #4ade80; text-align: right; white-space: nowrap;">--</div>
-            </div>
-
-            <!-- Carousel -->
-            <div style="display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: 13px 14px; background: rgba(251,191,36,0.03); border-radius: 13px; border: 1px solid rgba(251,191,36,0.1);">
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(251,191,36,0.08); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">🎠</div>
-              <div>
-                <div style="font-size: 0.83rem; font-weight: 700; color: #fff; margin-bottom: 2px;">Carousel Post</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Multi-slide · Permanent feed</div>
-              </div>
-              <div id="rateCarousel" style="font-size: 0.95rem; font-weight: 800; color: #fbbf24; text-align: right; white-space: nowrap;">--</div>
-            </div>
-
-            <!-- Bundle -->
-            <div style="display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: 14px 14px; background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(34,197,94,0.05)); border-radius: 13px; border: 1px solid rgba(168,85,247,0.22); position: relative;">
-              <div style="position: absolute; top: 8px; right: 62px; font-size: 0.58rem; font-weight: 800; color: #a855f7; text-transform: uppercase; letter-spacing: 0.06em; background: rgba(168,85,247,0.12); padding: 2px 7px; border-radius: 99px; border: 1px solid rgba(168,85,247,0.2);">Best Value</div>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(34,197,94,0.1)); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">💼</div>
-              <div>
-                <div style="font-size: 0.83rem; font-weight: 700; color: #fff; margin-bottom: 2px;">Bundle Package</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Story + Reel + Post · Combo deal</div>
-              </div>
-              <div id="rateBundle" style="font-size: 0.95rem; font-weight: 800; color: #22c55e; text-align: right; white-space: nowrap;">--</div>
-            </div>
-          </div>
-
-          <div id="collabRateDesc" style="font-size: 0.66rem; color: #475569; text-align: center; line-height: 1.4;">Based on your average views and engagement rate</div>
-        </div>
-      </div>
 
       <!-- Advanced Insights Section -->
       <div class="insights-row-grid">
@@ -371,11 +262,8 @@
 
   </main>
 
-  <!-- ── HIDDEN PDF TEMPLATE (populated by JS before export) ── -->
-  <div id="profilePdfCard" style="position: fixed; left: -9999px; top: 0; width: 794px; font-family: 'Inter', sans-serif; color: #0f0a1a; background: #fff; padding: 0;"></div>
-
   <nav class="bottom-nav">
-    <a href="/" class="bottom-nav-item">
+    <a href="/analyser" class="bottom-nav-item">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span>Home</span>
     </a>
@@ -389,9 +277,9 @@
       </div>
       <span>Analyse</span>
     </a>
-    <a href="/analyser#history" class="bottom-nav-item">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>History</span>
+    <a href="/rate-card" class="bottom-nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span>Rate Card</span>
     </a>
     <a href="/profile" class="bottom-nav-item active">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

@@ -65,9 +65,12 @@
 
     <!-- ── CREDITS BAR ── -->
     <div class="credits-bar" id="creditsBar" hidden>
-      <div class="credits-header">
-        <span class="credits-label">Credits</span>
-        <span class="credits-count" id="creditsCount">0 used / 5 available</span>
+      <div class="credits-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <span class="credits-label">Credits &middot; <span class="credits-count" id="creditsCount" style="font-weight: normal; color: var(--text-muted);">0 used / 5 available</span></span>
+        <button class="credits-history-cta" type="button" onclick="navigateTo('history')" style="background: none; border: none; color: #a855f7; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: all 0.2s;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          History
+        </button>
       </div>
       <div class="credits-track">
         <div class="credits-fill" id="creditsFill" style="width:0%"></div>
@@ -170,7 +173,7 @@
           <p style="margin: 0; font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">Unlock your estimated worth per Reels sponsor deal using niche and view benchmarks.</p>
         </div>
       </div>
-      <a href="/profile?generateRateCard=true" class="btn btn-primary" style="text-decoration: none; padding: 12px 24px; font-size: 0.85rem; font-weight: 700; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3); transition: transform 0.2s;">
+      <a href="/rate-card" class="btn btn-primary" style="text-decoration: none; padding: 12px 24px; font-size: 0.85rem; font-weight: 700; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3); transition: transform 0.2s;">
         ✨ Generate Rate Card
       </a>
     </div>
@@ -339,10 +342,10 @@
       </div>
       <span>Analyse</span>
     </button>
-    <button class="bottom-nav-item" id="navHistory" onclick="navigateTo('history')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>History</span>
-    </button>
+    <a href="/rate-card" class="bottom-nav-item" id="navRateCard">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span>Rate Card</span>
+    </a>
     <a href="/profile" class="bottom-nav-item" id="navProfile">
       <div class="nav-profile-avatar" id="navProfileAvatar">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -380,10 +383,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         <span>New Analysis</span>
       </button>
-      <button class="sidebar-item" id="sideNavHistory" onclick="navigateTo('history')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>History</span>
-      </button>
+      <a href="/rate-card" class="sidebar-item" id="sideNavRateCard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+        <span>Rate Card</span>
+      </a>
       <a href="/profile" class="sidebar-item" id="sideNavProfile">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>

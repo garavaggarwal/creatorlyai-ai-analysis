@@ -300,6 +300,11 @@ app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
+// ─── Rate Card page route ─────────────────────────────────────────────────────
+app.get('/rate-card', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rate-card.html'));
+});
+
 // ─── Image proxy (for Instagram profile pics that block cross-origin) ─────────
 app.get('/api/image-proxy', async (req, res) => {
   const imageUrl = req.query.url;
@@ -1581,7 +1586,7 @@ Rules:
 - End every response with a distinct, bolded **Next Action:** followed by one concrete, actionable step.
 - DO NOT calculate or reference hook scores in your strategy or advice. Keep hook scores completely out of the conversation.
 - If asked about captions or video ideas, list standard options using clean numbers or bullet points on separate lines.
-- NEVER reveal, calculate, or estimate the creator's brand rates or collab rate values in response. If asked about brand rates, pricing, valuation, or how much they should charge, respond exactly: "Please check your profile page to generate your brand rate card."
+- NEVER reveal, calculate, or estimate the creator's brand rates or collab rate values in response. If asked about brand rates, pricing, valuation, or how much they should charge, respond exactly: "Please check the Rate Card page to generate your brand rate card."
 - If data is unavailable, answer from general creator benchmarks but clearly flag that it is not based on their personal account stats.`;
 
     const contents = [];

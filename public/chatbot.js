@@ -662,7 +662,7 @@
     if (isRatesQuery) {
       setTimeout(() => {
         const streamBubble = appendMessageBubble('assistant', '', true);
-        const staticReply = "Please check your profile page to generate your brand rate card.";
+        const staticReply = "Please check the **Rate Card** page to generate your brand rate card.";
         streamBubble.innerHTML = formatMarkdown(staticReply);
         state.messages.push({ role: 'assistant', content: staticReply });
         localStorage.setItem('creatorly_chatbot_history', JSON.stringify(state.messages));

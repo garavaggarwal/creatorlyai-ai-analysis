@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Creatorly AI — Brand Rate Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/rate-card.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { corePlugins: { preflight: false } }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+
+  <div class="page-bg-grid"></div>
+  <div class="page-orb page-orb-1"></div>
+  <div class="page-orb page-orb-2"></div>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="/analyser" class="logo-link-analyser">
+        <div class="logo-mark-analyser">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <defs><linearGradient id="alg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs>
+            <rect width="32" height="32" rx="9" fill="url(#alg)"/>
+            <path d="M8 16 L14 10 L20 16 L26 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 22 L14 16 L20 22 L26 16" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-name-analyser">Creatorly <span class="logo-ai-analyser">AI</span></span>
+      </a>
+      <div class="header-center">
+        <span class="nav-pill"><span class="nav-pill-dot"></span>Brand Rate Card</span>
+      </div>
+      <div id="headerAuth"></div>
+    </div>
+  </header>
+
+  <main class="rate-card-main">
+
+    <!-- ── NO PROFILE STATE (When creator hasn't analyzed a profile yet) ── -->
+    <div id="noProfileState" class="no-profile-wrapper" hidden>
+      <div class="no-profile-card">
+        <div class="no-profile-icon">💳</div>
+        <h3 class="no-profile-title">No Analytics Found</h3>
+        <p class="no-profile-desc">Please unlock your profile analytics first so we can calculate your personalized brand rate card based on your live views and engagement.</p>
+        <a href="/profile" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:12px 24px; font-weight:700;">
+          Unlock Profile Analytics
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── RATE CARD RESULTS (When profile is present) ── -->
+    <div id="rateCardState" hidden>
+      <div class="rate-card-container" id="rateCardComponent">
+
+        <!-- Overlay for Generate CTA -->
+        <div id="rateCardOverlay" class="rate-card-generation-overlay">
+          <div class="rate-card-overlay-icon">✨</div>
+          <h4 class="rate-card-overlay-title">Brand Collaboration Rate Card</h4>
+          <p class="rate-card-overlay-desc">Personalised rates for Stories, Reels, Posts, Carousels & Bundles — calculated from live niche and view benchmarks.</p>
+          <p class="rate-card-overlay-hint">One-time generation. Saved to your profile.</p>
+          <button class="btn btn-primary" id="generateRateCardBtn" style="padding: 13px 32px; font-size: 0.9rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 28px rgba(168,85,247,0.45); transition: transform 0.2s; font-family: inherit;">
+            ✨ Generate My Rate Card
+          </button>
+        </div>
+
+        <!-- Content (blurred until unlocked) -->
+        <div id="rateCardContent" class="rate-card-unlocked-content rate-card-blurred">
+
+          <!-- Card Header -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(99,102,241,0.2)); border: 1px solid rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">💳</div>
+              <div>
+                <h3 style="margin: 0; font-size: 1rem; color: #fff; font-weight: 800; letter-spacing: -0.01em;">Brand Collaboration Rate Card</h3>
+                <p style="margin: 3px 0 0 0; font-size: 0.68rem; color: #64748b;">AI-generated valuation · Based on live metrics</p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              <!-- Share to Brand button (PDF) -->
+              <button id="sharePdfBtn" style="display: flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); color: #64748b; background: rgba(255,255,255,0.03); cursor: not-allowed; font-weight: 600; transition: all 0.25s; font-family: inherit;" title="Generate Rate Card first">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Share to Brand
+              </button>
+              <a href="/prompt-generator?prompt=How should I pitch to brand sponsors and negotiate my rate card?" id="askAiRateBtn" style="text-decoration: none; display: flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(168,85,247,0.4); color: #c084fc; background: rgba(168,85,247,0.05); cursor: pointer; font-weight: 600; transition: all 0.2s; font-family: inherit;">
+                <span>✨</span> Ask AI
+              </a>
+            </div>
+          </div>
+
+          <!-- Creator Tier Banner -->
+          <div class="creator-tier-badge-container">
+            <span style="font-size: 1.2rem;">👑</span>
+            <div style="flex: 1; min-width: 0;">
+              <div class="tier-label">Creator Tier</div>
+              <div id="creatorTierValue" class="tier-value">--</div>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <div style="font-size: 0.62rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px;">Based on</div>
+              <div id="rateCardBasedOn" style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">-- · --</div>
+            </div>
+          </div>
+
+          <!-- Per-Format Rate Rows -->
+          <div class="placements-header-text">Estimated Rates per Placement</div>
+          <div class="placements-list">
+
+            <!-- Reel -->
+            <div class="placement-row reel">
+              <div class="placement-icon-container">🎥</div>
+              <div>
+                <div class="placement-title">Reel</div>
+                <div class="placement-subtitle">Short-form video · 15–90 sec</div>
+              </div>
+              <div id="rateReel" class="placement-rate">--</div>
+            </div>
+
+            <!-- Story -->
+            <div class="placement-row story">
+              <div class="placement-icon-container">📖</div>
+              <div>
+                <div class="placement-title">Story</div>
+                <div class="placement-subtitle">Single frame or swipe-set · 24h</div>
+              </div>
+              <div id="rateStory" class="placement-rate">--</div>
+            </div>
+
+            <!-- Feed Post -->
+            <div class="placement-row post">
+              <div class="placement-icon-container">🖼️</div>
+              <div>
+                <div class="placement-title">Feed Post</div>
+                <div class="placement-subtitle">Static image · Permanent feed</div>
+              </div>
+              <div id="ratePost" class="placement-rate">--</div>
+            </div>
+
+            <!-- Carousel -->
+            <div class="placement-row carousel">
+              <div class="placement-icon-container">🎠</div>
+              <div>
+                <div class="placement-title">Carousel Post</div>
+                <div class="placement-subtitle">Multi-slide · Permanent feed</div>
+              </div>
+              <div id="rateCarousel" class="placement-rate">--</div>
+            </div>
+
+            <!-- Bundle -->
+            <div class="placement-row bundle">
+              <div class="best-value-tag">Best Value</div>
+              <div class="placement-icon-container">💼</div>
+              <div>
+                <div class="placement-title">Bundle Package</div>
+                <div class="placement-subtitle">Story + Reel + Post · Combo deal</div>
+              </div>
+              <div id="rateBundle" class="placement-rate">--</div>
+            </div>
+          </div>
+
+          <div id="collabRateDesc" style="font-size: 0.66rem; color: #475569; text-align: center; line-height: 1.4;">Based on your average views and engagement rate</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── BOTTOM NAVIGATION (mobile) ── -->
+  <nav class="bottom-nav">
+    <a href="/analyser" class="bottom-nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="/prompt-generator" class="bottom-nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Ask AI</span>
+    </a>
+    <a href="/analyser" class="bottom-nav-item">
+      <div class="nav-plus-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <span>Analyse</span>
+    </a>
+    <a href="/rate-card" class="bottom-nav-item active">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span>Rate Card</span>
+    </a>
+    <a href="/profile" class="bottom-nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <script src="/auth.js"></script>
+  <script src="/rate-card.js"></script>
+</body>
+</html>
