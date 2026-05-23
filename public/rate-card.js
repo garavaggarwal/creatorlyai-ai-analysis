@@ -180,15 +180,24 @@
       return n.toString();
     };
 
-    // Create a temporary element and append to the body (within rendering coordinate range)
+    // Get the current scroll offset
+    const currentScrollY = window.scrollY || window.pageYOffset || 0;
+
+    // Create a hidden wrapper container positioned at the current scroll coordinates
+    const wrapper = document.createElement('div');
+    wrapper.id = 'tempPdfWrapper';
+    wrapper.style.width = '0';
+    wrapper.style.height = '0';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '0';
+    wrapper.style.top = currentScrollY + 'px';
+    wrapper.style.zIndex = '99999';
+    wrapper.style.pointerEvents = 'none';
+
     const tempDiv = document.createElement('div');
     tempDiv.id = 'tempPdfRenderElement';
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '0';
-    tempDiv.style.top = '0';
     tempDiv.style.width = '794px'; // standard A4 pixel width at 96 DPI
-    tempDiv.style.zIndex = '-9999';
-    tempDiv.style.pointerEvents = 'none';
     tempDiv.style.background = '#fff';
     tempDiv.style.fontFamily = "'Inter', sans-serif";
 
@@ -309,7 +318,8 @@
       </div>
     `;
 
-    document.body.appendChild(tempDiv);
+    wrapper.appendChild(tempDiv);
+    document.body.appendChild(wrapper);
 
     // Trigger html2pdf configuration
     const opt = {
@@ -320,7 +330,7 @@
         scale: 1.5, // 1.5 scale is high-quality and very fast
         useCORS: false, 
         scrollX: 0, 
-        scrollY: 0, 
+        scrollY: currentScrollY, 
         windowWidth: 794,
         windowHeight: 1123,
         letterRendering: true 
@@ -336,7 +346,7 @@
           btn.style.pointerEvents = 'auto';
           btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share to Brand`;
         }
-        document.body.removeChild(tempDiv);
+        document.body.removeChild(wrapper);
       }).catch((err) => {
         console.error('[CreatorlyAI] PDF generation error:', err);
         if (btn) {
@@ -344,7 +354,7 @@
           btn.style.pointerEvents = 'auto';
           btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share to Brand`;
         }
-        document.body.removeChild(tempDiv);
+        document.body.removeChild(wrapper);
         alert('Failed to generate PDF. Please try again.');
       });
     } else {
@@ -354,7 +364,7 @@
         btn.style.pointerEvents = 'auto';
         btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Share to Brand`;
       }
-      document.body.removeChild(tempDiv);
+      document.body.removeChild(wrapper);
       alert('PDF library still loading — try again in a moment.');
     }
   }
