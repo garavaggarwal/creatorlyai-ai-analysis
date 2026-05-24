@@ -3,6 +3,7 @@ const ffmpegStatic = require('ffmpeg-static');
 const ffprobeStatic = require('ffprobe-static');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // Resolve paths, falling back to system binaries if static binaries are not downloaded/available
 let ffmpegPath = ffmpegStatic;
@@ -19,6 +20,42 @@ if (!ffprobePath || !fs.existsSync(ffprobePath)) {
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
+
+// ─── Extract Lightweight Audio Track ──────────────────────────────────────────
+function extractAudioTrack(videoPath, outputPath) {
+  return new Promise((resolve) => {
+    // Try MP3 extraction (32k mono)
+    ffmpeg(videoPath)
+      .noVideo()
+      .audioCodec('libmp3lame')
+      .audioChannels(1)
+      .audioBitrate('32k')
+      .save(outputPath)
+      .on('end', () => {
+        console.log('🎵 Audio track extracted successfully (MP3)');
+        resolve(outputPath);
+      })
+      .on('error', (err) => {
+        console.warn('MP3 audio extraction failed, trying WAV:', err.message);
+        // Fallback to uncompressed WAV (always works, but larger)
+        const wavPath = outputPath.replace(/\.mp3$/, '.wav');
+        ffmpeg(videoPath)
+          .noVideo()
+          .audioCodec('pcm_s16le')
+          .audioChannels(1)
+          .audioFrequency(16000) // downsample to 16kHz
+          .save(wavPath)
+          .on('end', () => {
+            console.log('🎵 Fallback audio track extracted successfully (WAV)');
+            resolve(wavPath);
+          })
+          .on('error', (wavErr) => {
+            console.warn('WAV audio extraction failed too:', wavErr.message);
+            resolve(null);
+          });
+      });
+  });
+}
 
 // ─── Get Video Metadata ───────────────────────────────────────────────────────
 function getVideoInfo(videoPath) {
@@ -333,10 +370,13 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
     else loudnessLabel = 'Too Loud / Clipping Risk';
   }
 
-  // Extract thumbnail
-  const thumbnailBase64 = await extractThumbnail(videoPath);
+  // Extract thumbnail and audio track in parallel to save time!
+  const [thumbnailBase64, audioPath] = await Promise.all([
+    extractThumbnail(videoPath),
+    info.hasAudio ? extractAudioTrack(videoPath, path.join(os.tmpdir(), `audio_${Date.now()}.mp3`)) : Promise.resolve(null)
+  ]);
 
-  console.log(`✅ ffmpeg done. Duration: ${info.duration}s, Cuts: ${scenes.length}, Frames: ${framePaths.length}`);
+  console.log(`✅ ffmpeg done. Duration: ${info.duration}s, Cuts: ${scenes.length}, Frames: ${framePaths.length}, Audio: ${audioPath ? 'Yes' : 'No'}`);
 
   return {
     videoInfo: info,
@@ -345,6 +385,7 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
     sceneTimestamps: scenes,
     silenceSegments: silenceReal.gaps,
     thumbnail: thumbnailBase64,
+    audioPath: audioPath,
     computed: {
       sceneCuts: scenes.length,
       cutsPerMinute: Math.round(cutsPerMinute * 10) / 10,

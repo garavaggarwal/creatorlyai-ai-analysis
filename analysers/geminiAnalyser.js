@@ -37,6 +37,18 @@ function imageToGeminiPart(filePath, mimeType = 'image/jpeg') {
   };
 }
 
+// ─── Convert audio to Gemini Part ────────────────────────────────────────────
+function audioToGeminiPart(filePath) {
+  const data = fs.readFileSync(filePath);
+  const mimeType = filePath.endsWith('.wav') ? 'audio/wav' : 'audio/mp3';
+  return {
+    inlineData: {
+      data: data.toString('base64'),
+      mimeType,
+    },
+  };
+}
+
 // ─── Stage 1: Reel type classification ───────────────────────────────────────
 function buildClassificationPrompt(computed, caption, niche) {
   const duration = computed.videoInfo?.duration?.toFixed(1);
@@ -92,7 +104,7 @@ function buildAnalysisPrompt(computed, caption, hashtags, niche, classification)
 
   const nicheGuidance = getNicheRules(reelType);
 
-  return `You are an expert Instagram Reels analyst and creator coach. A creator has submitted their reel for a full analysis. Your job is to give them the kind of honest, specific, actionable feedback that a top creator coach would give — not generic advice, but real observations tied to what you can actually see in these frames.
+  return `You are an expert Instagram Reels analyst and creator coach. A creator has submitted their reel for a full analysis. Your job is to give them the kind of honest, specific, actionable feedback that a top creator coach would give — not generic advice, but real observations tied to what you can actually see in these frames and hear in the attached audio track.
 
 REEL CONTEXT:
 - Type: ${reelType.replace(/_/g, ' ')} (hook style: ${hookType.replace(/_/g, ' ')})
@@ -108,6 +120,7 @@ TECHNICAL SNAPSHOT (translate these into creator-friendly language — never use
 - Silence gaps longer than 2s: ${silenceGaps}
 ${brightness !== null && brightness !== undefined ? `- Lighting: ${brightnessLabel}` : ''}
 - Orientation: ${isVertical ? 'Vertical (correct for Reels)' : 'NOT vertical — will be cropped or letterboxed on Instagram'}
+- Audio Track: A lightweight mono audio track of the video has been attached as an input part. Listen to it. Use it to transcribe and analyze the creator's exact spoken words, speech clarity, tone of voice, pacing, verbal hook, and background music choice. Do not just rely on visual frame overlays!
 
 FRAMES PROVIDED (you have screenshots at these timestamps — reference them specifically):
 ${frameTimestamps.join('s, ')}s
@@ -325,7 +338,14 @@ async function analyseWithGemini(ffmpegData, caption, hashtags, niche) {
     throw new Error('No video frames could be extracted for analysis');
   }
 
-  const trace = DEBUG ? { timestamp: new Date().toISOString(), frameCount: imageParts.length } : null;
+  // Check for extracted audio track and convert to Gemini part
+  const audioParts = [];
+  if (ffmpegData.audioPath && fs.existsSync(ffmpegData.audioPath)) {
+    console.log(`🎵 Attaching audio track to Gemini: ${ffmpegData.audioPath}`);
+    audioParts.push(audioToGeminiPart(ffmpegData.audioPath));
+  }
+
+  const trace = DEBUG ? { timestamp: new Date().toISOString(), frameCount: imageParts.length, hasAudio: audioParts.length > 0 } : null;
 
   // Stage 1: Classify
   const classification = await classifyReel(ffmpegData, caption, niche, imageParts);
@@ -333,7 +353,7 @@ async function analyseWithGemini(ffmpegData, caption, hashtags, niche) {
 
   // Stage 2: Analyse
   const analysisPrompt = buildAnalysisPrompt(ffmpegData, caption, hashtags, niche, classification);
-  const parts = [analysisPrompt, ...imageParts];
+  const parts = [analysisPrompt, ...audioParts, ...imageParts];
 
   if (trace) trace.prompt = analysisPrompt;
 

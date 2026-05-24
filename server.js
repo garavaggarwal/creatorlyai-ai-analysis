@@ -125,9 +125,15 @@ const upload = multer({
 });
 
 // ─── Cleanup helper ───────────────────────────────────────────────────────────
-function cleanupFiles(videoPath, framesDir) {
+function cleanupFiles(videoPath, framesDir, audioPath) {
   try {
     if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+    if (audioPath && fs.existsSync(audioPath)) {
+      fs.unlinkSync(audioPath);
+      // Also delete WAV fallback if it exists
+      const wavPath = audioPath.replace(/\.mp3$/, '.wav');
+      if (fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+    }
     if (framesDir && fs.existsSync(framesDir)) {
       fs.readdirSync(framesDir).forEach(f => fs.unlinkSync(path.join(framesDir, f)));
       fs.rmdirSync(framesDir);
@@ -1253,6 +1259,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
   const videoPath = req.file?.path;
   const framesDir = videoPath ? videoPath + '_frames' : null;
   let recordId = null;
+  let ffmpegData = null;
 
   try {
     if (!videoPath) {
@@ -1287,7 +1294,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
     });
 
     // 1. Run ffmpeg analysis
-    const ffmpegData = await runFfmpegAnalysis(videoPath, framesDir);
+    ffmpegData = await runFfmpegAnalysis(videoPath, framesDir);
     if (ffmpegData.videoInfo.duration < 1) {
       return res.status(400).json({ error: 'Video is too short or could not be read' });
     }
@@ -1334,7 +1341,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
     await markAnalysisFailed(recordId, err.message);
     res.status(500).json({ error: err.message || 'Analysis failed' });
   } finally {
-    cleanupFiles(videoPath, framesDir);
+    cleanupFiles(videoPath, framesDir, ffmpegData?.audioPath);
   }
 });
 
@@ -1342,6 +1349,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
 app.post('/api/analyse-url', express.json(), async (req, res) => {
   const { url, caption = '', hashtags = '', niche = 'general' } = req.body || {};
   let recordId = null;
+  let ffmpegData = null;
 
   if (!url || !url.trim()) {
     return res.status(400).json({ error: 'No Instagram URL provided' });
@@ -1389,7 +1397,7 @@ app.post('/api/analyse-url', express.json(), async (req, res) => {
     }
 
     // 2. Run the same pipeline
-    const ffmpegData = await runFfmpegAnalysis(videoPath, framesDir);
+    ffmpegData = await runFfmpegAnalysis(videoPath, framesDir);
     if (ffmpegData.videoInfo.duration < 1) {
       return res.status(400).json({ error: 'Video is too short or could not be read' });
     }
@@ -1433,7 +1441,7 @@ app.post('/api/analyse-url', express.json(), async (req, res) => {
     await markAnalysisFailed(recordId, err.message);
     res.status(500).json({ error: err.message || 'Analysis failed' });
   } finally {
-    cleanupFiles(videoPath, framesDir);
+    cleanupFiles(videoPath, framesDir, ffmpegData?.audioPath);
   }
 });
 
