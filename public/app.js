@@ -291,7 +291,11 @@ analyseForm.addEventListener('submit', async (e) => {
 
   const niche = document.getElementById('nicheInput').value;
   showProgress();
-  animateSteps();
+  if (activeTab === 'upload') {
+    setGlobalProgress(0, "Preparing video file upload...");
+  } else {
+    startProcessingAnimation(10);
+  }
 
   const session = typeof getRawSession === 'function' ? getRawSession() : null;
   const authToken = session?.access_token || null;
@@ -318,7 +322,25 @@ analyseForm.addEventListener('submit', async (e) => {
         xhr.open('POST', `${API_BASE}/api/analyse`);
         xhr.timeout = 300000;
         if (authToken) xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+
+        let processingStarted = false;
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            const uPercent = Math.round((evt.loaded / evt.total) * 100);
+            const globalPercent = Math.round(uPercent * 0.3); // Map 0-100% upload to 0-30% global progress
+            setGlobalProgress(globalPercent, `Uploading video: ${uPercent}%`);
+            if (uPercent >= 100 && !processingStarted) {
+              processingStarted = true;
+              startProcessingAnimation(30);
+            }
+          }
+        };
+
         xhr.onload = () => {
+          if (!processingStarted) {
+            processingStarted = true;
+            startProcessingAnimation(30);
+          }
           try {
             const json = JSON.parse(xhr.responseText);
             resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data: json });
@@ -370,10 +392,14 @@ analyseForm.addEventListener('submit', async (e) => {
       throw new Error(data.data.error || 'Analysis failed. Please try again.');
     }
 
-    localStorage.removeItem('creatorly_inflight');
-    showResults(data.data.results);
+    setGlobalProgress(100, "Analysis complete!");
+    setTimeout(() => {
+      localStorage.removeItem('creatorly_inflight');
+      showResults(data.data.results);
+    }, 450);
 
   } catch (err) {
+    clearProgressInterval();
     if (err.message === 'network') {
       await tryRecoverResult();
     } else {
@@ -831,6 +857,7 @@ function showProgress() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function showResults(results) {
+  clearProgressInterval();
   progressCard.hidden = true;
   resultsSection.hidden = false;
   errorCard.hidden = true;
@@ -852,6 +879,7 @@ function showResults(results) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function showError(msg) {
+  clearProgressInterval();
   progressCard.hidden = true;
   errorCard.hidden = false;
   if (historyPage) historyPage.hidden = true;
@@ -863,6 +891,7 @@ function showError(msg) {
   errorMsg.textContent = msg;
 }
 function resetUI() {
+  clearProgressInterval();
   uploadCard.hidden = false;
   progressCard.hidden = true;
   resultsSection.hidden = true;
@@ -881,20 +910,106 @@ function resetUI() {
 retryBtn.addEventListener('click', resetUI);
 analyseAnotherBtn.addEventListener('click', resetUI);
 
-/* ── Step animation ── */
-function animateSteps() {
-  const steps = [
-    document.getElementById('step1'),
-    document.getElementById('step2'),
-    document.getElementById('step3'),
-  ];
-  steps.forEach(s => s.className = 'step');
-  let i = 0;
-  function next() {
-    if (i > 0) steps[i - 1].className = 'step done';
-    if (i < steps.length) { steps[i].className = 'step active'; i++; setTimeout(next, 12000); }
+/* ── Dynamic Progress & Step animation ── */
+let progressInterval = null;
+let currentGlobalPercent = 0;
+
+function clearProgressInterval() {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
   }
-  next();
+}
+
+function setGlobalProgress(percent, statusText) {
+  currentGlobalPercent = percent;
+  const percentEl = document.getElementById('progressPercent');
+  const circleEl = document.getElementById('progressRingCircle');
+  const subEl = document.querySelector('.progress-sub');
+  
+  if (percentEl) {
+    percentEl.textContent = `${Math.round(percent)}%`;
+  }
+  if (circleEl) {
+    const offset = 201 - (201 * (percent / 100));
+    circleEl.style.strokeDashoffset = offset;
+  }
+  if (subEl && statusText) {
+    subEl.textContent = statusText;
+  }
+  
+  // Highlight steps based on percent
+  const s1 = document.getElementById('step1');
+  const s2 = document.getElementById('step2');
+  const s3 = document.getElementById('step3');
+  
+  if (s1 && s2 && s3) {
+    if (percent < 35) {
+      s1.className = 'step active';
+      s2.className = 'step';
+      s3.className = 'step';
+    } else if (percent < 75) {
+      s1.className = 'step done';
+      s2.className = 'step active';
+      s3.className = 'step';
+    } else if (percent < 100) {
+      s1.className = 'step done';
+      s2.className = 'step done';
+      s3.className = 'step active';
+    } else {
+      s1.className = 'step done';
+      s2.className = 'step done';
+      s3.className = 'step done';
+    }
+  }
+}
+
+function startProcessingAnimation(startPercent = 10) {
+  clearProgressInterval();
+  
+  let current = startPercent;
+  setGlobalProgress(current, "Initializing server tasks...");
+  
+  const statusMessages = [
+    { threshold: 20, text: "Extracting key frames..." },
+    { threshold: 35, text: "Detecting scene cuts..." },
+    { threshold: 50, text: "Analyzing audio levels..." },
+    { threshold: 65, text: "Gemini Vision reviewing hook..." },
+    { threshold: 80, text: "Calculating Creatorly Score..." },
+    { threshold: 92, text: "Generating captions & hashtags..." },
+    { threshold: 98, text: "Finalizing dashboard layout..." }
+  ];
+  
+  progressInterval = setInterval(() => {
+    if (current < 99) {
+      // Easing curve: increase slower as we get closer to 99%
+      let increment = 1.2;
+      if (current > 85) increment = 0.2;
+      else if (current > 60) increment = 0.5;
+      else if (current > 35) increment = 0.8;
+      
+      current = Math.min(99, current + increment);
+      
+      // Find appropriate status text
+      let msg = "Processing video analysis...";
+      for (const m of statusMessages) {
+        if (current <= m.threshold) {
+          msg = m.text;
+          break;
+        }
+      }
+      if (current > 92) {
+        msg = "Assembling final report...";
+      }
+      
+      setGlobalProgress(current, msg);
+    }
+  }, 300); // update every 300ms for ultra-smooth fluid movement!
+}
+
+// Backward compatibility fallback
+function animateSteps() {
+  // Handled dynamically via setGlobalProgress/startProcessingAnimation
 }
 
 /* ── Render results ── */

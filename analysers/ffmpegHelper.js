@@ -4,8 +4,21 @@ const ffprobeStatic = require('ffprobe-static');
 const fs = require('fs');
 const path = require('path');
 
-ffmpeg.setFfmpegPath(ffmpegStatic);
-ffmpeg.setFfprobePath(ffprobeStatic.path);
+// Resolve paths, falling back to system binaries if static binaries are not downloaded/available
+let ffmpegPath = ffmpegStatic;
+let ffprobePath = ffprobeStatic.path;
+
+if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
+  console.log('🔧 ffmpeg-static path not found, falling back to system ffmpeg');
+  ffmpegPath = 'ffmpeg';
+}
+if (!ffprobePath || !fs.existsSync(ffprobePath)) {
+  console.log('🔧 ffprobe-static path not found, falling back to system ffprobe');
+  ffprobePath = 'ffprobe';
+}
+
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 // ─── Get Video Metadata ───────────────────────────────────────────────────────
 function getVideoInfo(videoPath) {
@@ -137,36 +150,43 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
 
   console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t.toFixed(1) + 's').join(', ')}`);
 
-  const framePaths = [];
-  const finalTimestamps = [];
+  const framePaths = new Array(validTimestamps.length).fill(null);
+  const finalTimestamps = new Array(validTimestamps.length).fill(null);
 
-  for (let i = 0; i < validTimestamps.length; i++) {
-    const ts = validTimestamps[i];
-    const filename = `frame_${i}.jpg`;
-    const targetPath = path.join(outputDir, filename);
-    await new Promise((resolve) => {
-      ffmpeg(videoPath)
-        .screenshots({
-          timestamps: [ts],
-          filename: filename,
-          folder: outputDir,
-          size: '720x?',
-        })
-        .on('end', () => {
-          if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 0) {
-            framePaths.push(targetPath);
-            finalTimestamps.push(ts);
-          }
-          resolve();
-        })
-        .on('error', (err) => {
-          console.warn(`Frame ${i} at ${ts}s failed:`, err.message);
-          resolve();
-        });
-    });
+  const batchSize = 8;
+  for (let i = 0; i < validTimestamps.length; i += batchSize) {
+    const batch = validTimestamps.slice(i, i + batchSize);
+    await Promise.all(batch.map((ts, index) => {
+      const frameIndex = i + index;
+      const filename = `frame_${frameIndex}.jpg`;
+      const targetPath = path.join(outputDir, filename);
+      return new Promise((resolve) => {
+        ffmpeg(videoPath)
+          .screenshots({
+            timestamps: [ts],
+            filename: filename,
+            folder: outputDir,
+            size: '720x?',
+          })
+          .on('end', () => {
+            if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 0) {
+              framePaths[frameIndex] = targetPath;
+              finalTimestamps[frameIndex] = ts;
+            }
+            resolve();
+          })
+          .on('error', (err) => {
+            console.warn(`Frame ${frameIndex} at ${ts}s failed:`, err.message);
+            resolve();
+          });
+      });
+    }));
   }
 
-  return { framePaths, frameTimestamps: finalTimestamps };
+  const cleanFramePaths = framePaths.filter(p => p !== null);
+  const cleanTimestamps = finalTimestamps.filter(t => t !== null);
+
+  return { framePaths: cleanFramePaths, frameTimestamps: cleanTimestamps };
 }
 
 // ─── Scene Change Detection ───────────────────────────────────────────────────
@@ -276,10 +296,14 @@ async function runFfmpegAnalysis(videoPath, framesOutputDir) {
   console.log('🎬 Starting ffmpeg analysis...');
 
   const info = await getVideoInfo(videoPath);
-  const scenes = await detectSceneChanges(videoPath);
-  const loudnessReal = info.hasAudio ? await getAudioLoudness(videoPath) : { inputI: null, inputTP: null };
-  const silenceReal = info.hasAudio ? await detectSilence(videoPath, info.duration) : { gaps: [], totalSilenceSecs: 0, silencePercent: 0, deadAirCount: 0 };
-  const videoStats = await getVideoStats(videoPath);
+
+  // Run scene detection, audio analysis, and video signal stats in parallel to save time!
+  const [scenes, loudnessReal, silenceReal, videoStats] = await Promise.all([
+    detectSceneChanges(videoPath),
+    info.hasAudio ? getAudioLoudness(videoPath) : Promise.resolve({ inputI: null, inputTP: null }),
+    info.hasAudio ? detectSilence(videoPath, info.duration) : Promise.resolve({ gaps: [], totalSilenceSecs: 0, silencePercent: 0, deadAirCount: 0 }),
+    getVideoStats(videoPath)
+  ]);
 
   // Extract frames (using scene change timestamps for smarter sampling)
   fs.mkdirSync(framesOutputDir, { recursive: true });
