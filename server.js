@@ -1579,12 +1579,42 @@ app.post('/api/chatbot', async (req, res) => {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     
+    const { messages, creatorProfile, reelAnalysisContext } = req.body || {};
     const creatorProfileJson = creatorProfile ? JSON.stringify(creatorProfile, null, 2) : '{}';
+
+    let reelContextInstruction = '';
+    if (reelAnalysisContext) {
+      const niche = reelAnalysisContext.niche || 'general';
+      const overallScore = reelAnalysisContext.overall_score || '—';
+      const shortDesc = reelAnalysisContext.short_description || reelAnalysisContext.overall_summary || 'Not provided';
+      const verdictText = reelAnalysisContext.verdict || reelAnalysisContext.video_summary || 'Not provided';
+      const winsText = (reelAnalysisContext.top_3_wins || []).join(' | ') || 'None';
+      const fixesText = (reelAnalysisContext.top_5_fixes || reelAnalysisContext.top_3_fixes || []).join(' | ') || 'None';
+      
+      const hookScore = reelAnalysisContext.hook?.score || '—';
+      const visualScore = reelAnalysisContext.visual_quality?.score || '—';
+      const audioScore = reelAnalysisContext.audio_quality?.score || '—';
+      const editingScore = reelAnalysisContext.editing?.score || '—';
+      const contentScore = reelAnalysisContext.content_structure?.score || '—';
+      const retentionScore = reelAnalysisContext.retention?.score || '—';
+
+      reelContextInstruction = `
+You also have access to the detailed analysis of the creator's latest uploaded reel:
+- Short Description: "${shortDesc}"
+- Niche: ${niche}
+- Overall Score: ${overallScore}/10
+- Component Scores: Hook: ${hookScore}/10, Visuals: ${visualScore}/10, Audio: ${audioScore}/10, Editing: ${editingScore}/10, Content: ${contentScore}/10, Retention: ${retentionScore}/10
+- Verdict / Strategy: "${verdictText}"
+- Top Wins (What's Working): ${winsText}
+- Top Fixes (Ranked): ${fixesText}
+`;
+    }
 
     const systemInstruction = `You are "Ask AI", a personal Instagram growth strategist for Indian creators.
 
 You have access to this creator's profile data:
 ${creatorProfileJson}
+${reelContextInstruction}
 
 Rules:
 - Always reference their actual data when answering. Never give generic advice when their data is available.

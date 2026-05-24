@@ -900,6 +900,15 @@ function resetUI() {
   instaUrlInput.value = '';
   updateSubmitBtn();
   document.getElementById('nicheInput').value = 'general';
+  
+  // Hide custom revamp views
+  const floatBtn = document.getElementById('floatingAskAiBtn');
+  if (floatBtn) floatBtn.hidden = true;
+  const winsCard = document.getElementById('winsCard');
+  const winsLabel = document.getElementById('winsSectionLabel');
+  if (winsCard) winsCard.hidden = true;
+  if (winsLabel) winsLabel.hidden = true;
+
   // Pause and reset video player
   const videoPlayer = document.getElementById('videoPlayer');
   if (videoPlayer) { videoPlayer.pause(); videoPlayer.src = ''; }
@@ -1037,7 +1046,7 @@ function renderResults(r) {
   if (perfPill) { perfPill.textContent = perfLabel; perfPill.className = `perf-pill ${perfCls}`; }
 
   const summaryEl = document.getElementById('overallSummary');
-  if (summaryEl) summaryEl.textContent = r.short_description || r.overall_summary || '';
+  if (summaryEl) summaryEl.textContent = r.short_description || r.video_summary || r.overall_summary || '';
 
   // Sub-scores removed from top card — shown in Reel Scores section instead
 
@@ -1054,28 +1063,67 @@ function renderResults(r) {
     scoreEl.style.color = color;
   }
 
-  // 2. Verdict text (in top card, below divider) — no chips
+  // 2. Verdict text (in top card, below divider) — 2-3 lines strategist tone
   const verdictText = document.getElementById('verdictText');
-  if (verdictText) verdictText.textContent = r.why_viral || r.why_rework || r.video_summary || r.overall_summary || '';
+  if (verdictText) verdictText.textContent = r.verdict || r.why_viral || r.why_rework || r.video_summary || '';
 
-  // 3. Fixes
+  // 2.5 WHAT'S WORKING (Wins Card)
+  const winsList = document.getElementById('winsList');
+  const winsCard = document.getElementById('winsCard');
+  const winsLabel = document.getElementById('winsSectionLabel');
+  const wins = r.top_3_wins || [];
+  if (winsList && winsCard && winsLabel) {
+    const cleanWins = wins.filter(w => w && w.trim().length > 0).slice(0, 2);
+    if (cleanWins.length > 0) {
+      winsList.innerHTML = cleanWins.map(win => {
+        return `
+          <div class="win-item-v2" style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border);">
+            <span class="win-icon" style="color: #22c55e; flex-shrink: 0; font-size: 1.1rem; margin-top: 1px;">✅</span>
+            <div class="win-desc" style="font-size: 0.84rem; color: var(--text-dim); font-weight: 400; line-height: 1.4;">${win}</div>
+          </div>
+        `;
+      }).join('');
+      const lastItem = winsList.querySelector('.win-item-v2:last-child');
+      if (lastItem) lastItem.style.borderBottom = 'none';
+      winsCard.hidden = false;
+      winsLabel.hidden = false;
+    } else {
+      winsCard.hidden = true;
+      winsLabel.hidden = true;
+    }
+  }
+
+  // 3. Fixes - up to 5, ranked by impact, clickable seeking
   const fixesList = document.getElementById('fixesList');
-  const fixes = r.top_3_fixes || [];
+  const fixes = r.top_5_fixes || r.top_3_fixes || [];
   if (fixesList) {
-    fixesList.innerHTML = fixes.map((fix, i) => {
+    fixesList.innerHTML = fixes.slice(0, 5).map((fix, i) => {
       const impact = i < 2 ? 'high' : i < 4 ? 'medium' : 'low';
       const impactLabel = i < 2 ? 'High impact' : i < 4 ? 'Medium impact' : 'Low impact';
-      // Split fix into title and description at first period or dash
-      const parts = fix.split(/\.\s*Fix:\s*|—\s*/);
-      const title = parts[0] || fix;
-      const desc = parts[1] || '';
-      return `<div class="fix-item-v2"><div class="fix-num ${impact}">${i + 1}</div><div class="fix-content"><div class="fix-title">${title}<span class="fix-impact ${impact}">${impactLabel}</span></div>${desc ? `<div class="fix-desc">${desc}</div>` : ''}</div></div>`;
+      const parts = fix.split(/\s*—\s*|\.\s*Fix:\s*/);
+      const title = (parts[0] || fix).trim();
+      const desc = (parts.slice(1).join(' — ') || '').trim();
+      const timestamp = extractTimestamp(fix);
+      const clickableClass = timestamp !== null ? 'clickable-fix' : '';
+      const clickHandler = timestamp !== null ? `onclick="jumpToTime(${timestamp}); const tl = document.getElementById('timelineCard'); if (tl) tl.scrollIntoView({ behavior: 'smooth' });"` : '';
+
+      return `
+        <div class="fix-item-v2 ${clickableClass}" ${clickHandler} style="cursor: ${timestamp !== null ? 'pointer' : 'default'};">
+          <div class="fix-num ${impact}">${i + 1}</div>
+          <div class="fix-content">
+            <div class="fix-title" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; font-weight: 500;">
+              ${title}
+              <span class="fix-impact ${impact}">${impactLabel}</span>
+              ${timestamp !== null ? `<span class="fix-seek-badge" style="font-size: 0.65rem; background: rgba(168,85,247,0.15); color: #c084fc; padding: 2px 6px; border-radius: 4px; font-weight: 500;">⏱️ Seek</span>` : ''}
+            </div>
+            ${desc ? `<div class="fix-desc" style="font-weight: 400;">${desc}</div>` : ''}
+          </div>
+        </div>
+      `;
     }).join('');
   }
 
-  // Wins section removed — verdict text covers this now
-
-  // 5. Reel Scores — horizontal scrollable cards with rings
+  // 5. Reel Scores — horizontal scrollable cards with rings (non-bullet short paragraph)
   const scoresScroll = document.getElementById('reelScoresScroll');
   if (scoresScroll) {
     const scoreCategories = [
@@ -1099,7 +1147,8 @@ function renderResults(r) {
       ].slice(0, 2);
       const circumference = 188;
       const offset = circumference - (s / 10) * circumference;
-      const pointsHtml = points.map(p => `<div class="reel-score-point">• ${p}</div>`).join('');
+      const paragraphText = points.join(' ');
+      const pointsHtml = `<p class="reel-score-paragraph" style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.4; margin: 4px 0 0; font-weight: 400;">${paragraphText}</p>`;
 
       let aiButtonHtml = '';
       if (c.key === 'hook') {
@@ -1126,6 +1175,16 @@ function renderResults(r) {
         </div>
       `;
     }).join('');
+  }
+
+  // Floating chatbot integration
+  const floatBtn = document.getElementById('floatingAskAiBtn');
+  if (floatBtn) {
+    floatBtn.hidden = false;
+    floatBtn.onclick = () => {
+      localStorage.setItem('currentAnalysisContext', JSON.stringify(r));
+      window.openCreatorlyChat("Let's talk about the analysis of this video.");
+    };
   }
 
   // 6. Timeline — always show
@@ -1540,17 +1599,23 @@ function renderSyncTimeline(td, syncPoints, syncScore) {
     tStamps.innerHTML = stamps.map(t => `<span>${formatTime(t)}</span>`).join('');
   }
 
-  // Issue rows
+  // Issue rows - sorted chronologically, clickable to seek
   const issues = (syncPoints || []).filter(p => p.status !== 'ok');
   if (issuesList) {
     if (issues.length === 0) {
       issuesList.innerHTML = '<div class="tl-issue-row green"><span class="tl-issue-dot" style="background:#15803d"></span> No issues found — your reel looks great!</div>';
     } else {
-      issuesList.innerHTML = issues.map(pt => {
+      const sortedIssues = [...issues].sort((a, b) => a.timestamp - b.timestamp);
+      issuesList.innerHTML = sortedIssues.map(pt => {
         const time = formatTime(pt.timestamp);
         const colorClass = (pt.status === 'audio_issue' || pt.status === 'slow' || pt.status === 'ending') ? 'amber' : 'red';
         const note = pt.note || 'Issue detected';
-        return `<div class="tl-issue-row ${colorClass}"><span class="tl-issue-dot" style="background:${colorClass === 'red' ? '#dc2626' : '#b45309'}"></span> ${time} — ${note}</div>`;
+        return `
+          <div class="tl-issue-row ${colorClass}" onclick="jumpToTime(${pt.timestamp})" style="cursor: pointer;">
+            <span class="tl-issue-dot" style="background:${colorClass === 'red' ? '#dc2626' : '#b45309'}"></span>
+            ${time} — ${note}
+          </div>
+        `;
       }).join('');
     }
   }
@@ -1563,6 +1628,26 @@ function toggleIssueCard(el, timestamp) {
   el.parentElement.querySelectorAll('.tl2-issue-card').forEach(c => c.classList.remove('expanded'));
   // Toggle this one
   if (!wasExpanded) el.classList.add('expanded');
+}
+
+// Parse timestamp in seconds from a text string
+function extractTimestamp(text) {
+  if (!text) return null;
+  const mMinSec = text.match(/\[?(\d+):(\d+)\]?/);
+  if (mMinSec) {
+    const mins = parseInt(mMinSec[1], 10);
+    const secs = parseInt(mMinSec[2], 10);
+    return mins * 60 + secs;
+  }
+  const mSec = text.match(/\b(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\b/i);
+  if (mSec) {
+    return parseFloat(mSec[1]);
+  }
+  const mAt = text.match(/\bat\s+(\d+(?:\.\d+)?)\b/i);
+  if (mAt) {
+    return parseFloat(mAt[1]);
+  }
+  return null;
 }
 
 // Jump video to timestamp

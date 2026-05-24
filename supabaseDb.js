@@ -219,7 +219,7 @@ async function saveAnalysisResult(recordId, result) {
     overall_summary:      result.overall_summary || null,
     video_summary:        result.video_summary   || null,
     top_3_wins:           result.top_3_wins      || [],
-    top_3_fixes:          result.top_3_fixes     || [],
+    top_3_fixes:          result.top_5_fixes     || result.top_3_fixes || [],
     suggested_captions:   result.suggested_captions  || [],
     suggested_hashtags:   result.suggested_hashtags  || [],
     sync_timeline:        result.sync_timeline   || [],

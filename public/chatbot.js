@@ -678,9 +678,22 @@
   // Call the Streaming endpoint and read chunks word-by-word
   async function streamAIResponse() {
     const profile = getCreatorProfile();
+    
+    // Retrieve reel analysis context if available
+    let reelAnalysisContext = null;
+    try {
+      const contextStr = localStorage.getItem('currentAnalysisContext');
+      if (contextStr) {
+        reelAnalysisContext = JSON.parse(contextStr);
+      }
+    } catch (err) {
+      console.warn('Failed to parse currentAnalysisContext:', err);
+    }
+
     const apiPayload = {
       messages: state.messages,
-      creatorProfile: profile
+      creatorProfile: profile,
+      reelAnalysisContext: reelAnalysisContext
     };
 
     const streamBubble = appendMessageBubble('assistant', '', true);

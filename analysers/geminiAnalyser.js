@@ -139,17 +139,19 @@ For EVERY score category:
 
 IMPORTANT: Both strengths[0] and improvements[0] MUST be complete sentences that end with a period. Never truncate mid-sentence.
 
-For top_3_fixes: 3 highest-impact changes. Each fix should be 2–3 sentences. Name the timestamp, describe what's wrong, give a concrete action.
+For verdict: 2-3 sentences max. Explain why this reel will or won't perform. Written like a sharp strategist. If it has viral potential say it, if it needs rework say exactly why. Do not use bullet points, write as one unified paragraph.
 
-For top_3_wins: 3 things the creator should be proud of. Be specific and genuine.
+For top_5_fixes: exactly 5 fixes, ranked by impact (1 being the highest impact, 5 the lowest). Each fix must consist of a Title followed by a dash and exactly one actionable line (e.g. "Title — One actionable instruction. Include timestamp like at 2.5s or [0:04] if relevant"). No essays.
+
+For top_3_wins: 3 things the creator should be proud of (only include if something is genuinely strong). Each win must be exactly 1 clear line describing what is working and why it helps retention.
 
 For why_viral: If this reel has real viral potential, explain exactly why in 2 complete sentences. If not, leave as empty string.
 
 For why_rework: In 2 complete sentences, explain the core reason this reel needs work.
 
-For short_description: 1–2 sentences describing what this reel is actually about.
+For short_description: 1–2 sentences describing what this reel is actually about (what is happening in the video / summarisation of it).
 
-For sync_timeline: Go through each timestamp. Mark each as: ok / slow / audio_issue / text_issue / visual_issue / hook / ending. Note should be plain language, under 6 words.
+For sync_timeline: Go through each timestamp. Mark each as: ok / slow / audio_issue / text_issue / visual_issue / hook / ending. Note should be plain language, under 4 words, focusing only on the issue. Avoid repetitive descriptions or suggestions.
 
 For suggested_captions: 5 real captions this creator could actually use — hook-first, specific to their content.
 
@@ -160,7 +162,8 @@ Return ONLY valid JSON. No markdown fences, no explanation outside the JSON.
 
 {
   "niche": "detected niche in 1-2 words",
-  "short_description": "1-2 sentences describing what this reel is actually about",
+  "short_description": "1-2 sentences describing what this reel is actually about (what is happening in the video)",
+  "verdict": "2-3 sentences max strategist paragraph why this reel will or won't perform",
   "why_viral": "2 complete sentences explaining viral potential, or empty string if none",
   "why_rework": "2 complete sentences explaining the core issue holding this reel back",
   "hook": {
@@ -215,14 +218,16 @@ Return ONLY valid JSON. No markdown fences, no explanation outside the JSON.
   "overall_summary": "One punchy sentence capturing the single most important thing about this reel.",
   "predicted_performance": "below_average | average | above_average | viral_potential",
   "top_3_wins": [
-    "Specific win with evidence from the frames and why it matters for this reel.",
-    "Specific win with evidence from the frames and why it matters for this reel.",
-    "Specific win with evidence from the frames and why it matters for this reel."
+    "Specific win with evidence from the frames and why it helps retention.",
+    "Specific win with evidence from the frames and why it helps retention.",
+    "Specific win with evidence from the frames and why it helps retention."
   ],
-  "top_3_fixes": [
-    "2-3 sentences: name the timestamp, describe what is wrong, give a concrete action.",
-    "2-3 sentences: name the timestamp, describe what is wrong, give a concrete action.",
-    "2-3 sentences: describe the issue and give a concrete action the creator can take."
+  "top_5_fixes": [
+    "Title 1 — Actionable fix description with timestamp (e.g. at 2.5s or [0:04]).",
+    "Title 2 — Actionable fix description with timestamp.",
+    "Title 3 — Actionable fix description with timestamp.",
+    "Title 4 — Actionable fix description with timestamp.",
+    "Title 5 — Actionable fix description with timestamp."
   ],
   "suggested_captions": [
     "Real caption option 1 — hook-first, specific to this content",
