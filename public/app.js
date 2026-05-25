@@ -947,28 +947,90 @@ function setGlobalProgress(percent, statusText) {
     subEl.textContent = statusText;
   }
   
-  // Highlight steps based on percent
+  // Highlight steps based on percent (7 vertical stages V2)
   const s1 = document.getElementById('step1');
   const s2 = document.getElementById('step2');
   const s3 = document.getElementById('step3');
+  const s4 = document.getElementById('step4');
+  const s5 = document.getElementById('step5');
+  const s6 = document.getElementById('step6');
+  const s7 = document.getElementById('step7');
   
-  if (s1 && s2 && s3) {
-    if (percent < 35) {
-      s1.className = 'step active';
-      s2.className = 'step';
-      s3.className = 'step';
-    } else if (percent < 75) {
-      s1.className = 'step done';
-      s2.className = 'step active';
-      s3.className = 'step';
+  if (s1 && s2 && s3 && s4 && s5 && s6 && s7) {
+    const setStepState = (el, state) => {
+      if (state === 'done') {
+        el.className = 'step-v2 done';
+      } else if (state === 'active') {
+        el.className = 'step-v2 active';
+      } else {
+        el.className = 'step-v2';
+      }
+    };
+
+    if (percent < 15) {
+      setStepState(s1, 'active');
+      setStepState(s2, 'pending');
+      setStepState(s3, 'pending');
+      setStepState(s4, 'pending');
+      setStepState(s5, 'pending');
+      setStepState(s6, 'pending');
+      setStepState(s7, 'pending');
+    } else if (percent < 35) {
+      setStepState(s1, 'done');
+      setStepState(s2, 'active');
+      setStepState(s3, 'pending');
+      setStepState(s4, 'pending');
+      setStepState(s5, 'pending');
+      setStepState(s6, 'pending');
+      setStepState(s7, 'pending');
+    } else if (percent < 50) {
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'active');
+      setStepState(s4, 'pending');
+      setStepState(s5, 'pending');
+      setStepState(s6, 'pending');
+      setStepState(s7, 'pending');
+    } else if (percent < 65) {
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'done');
+      setStepState(s4, 'active');
+      setStepState(s5, 'pending');
+      setStepState(s6, 'pending');
+      setStepState(s7, 'pending');
+    } else if (percent < 80) {
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'done');
+      setStepState(s4, 'done');
+      setStepState(s5, 'active');
+      setStepState(s6, 'pending');
+      setStepState(s7, 'pending');
+    } else if (percent < 92) {
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'done');
+      setStepState(s4, 'done');
+      setStepState(s5, 'done');
+      setStepState(s6, 'active');
+      setStepState(s7, 'pending');
     } else if (percent < 100) {
-      s1.className = 'step done';
-      s2.className = 'step done';
-      s3.className = 'step active';
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'done');
+      setStepState(s4, 'done');
+      setStepState(s5, 'done');
+      setStepState(s6, 'done');
+      setStepState(s7, 'active');
     } else {
-      s1.className = 'step done';
-      s2.className = 'step done';
-      s3.className = 'step done';
+      setStepState(s1, 'done');
+      setStepState(s2, 'done');
+      setStepState(s3, 'done');
+      setStepState(s4, 'done');
+      setStepState(s5, 'done');
+      setStepState(s6, 'done');
+      setStepState(s7, 'done');
     }
   }
 }
@@ -977,16 +1039,16 @@ function startProcessingAnimation(startPercent = 10) {
   clearProgressInterval();
   
   let current = startPercent;
-  setGlobalProgress(current, "Initializing server tasks...");
+  setGlobalProgress(current, "Initializing analysis workspace...");
   
   const statusMessages = [
-    { threshold: 20, text: "Extracting key frames..." },
-    { threshold: 35, text: "Detecting scene cuts..." },
-    { threshold: 50, text: "Analyzing audio levels..." },
-    { threshold: 65, text: "Gemini Vision reviewing hook..." },
-    { threshold: 80, text: "Calculating Creatorly Score..." },
-    { threshold: 92, text: "Generating captions & hashtags..." },
-    { threshold: 98, text: "Finalizing dashboard layout..." }
+    { threshold: 15, text: "Initializing analysis workspace..." },
+    { threshold: 35, text: "Processing video upload/download..." },
+    { threshold: 50, text: "Extracting frames and sampling timeline..." },
+    { threshold: 65, text: "Analyzing speech loudness and silence gaps..." },
+    { threshold: 80, text: "Gemini Vision evaluating scene flow and hook..." },
+    { threshold: 92, text: "Aggregating metrics and final scores..." },
+    { threshold: 98, text: "Generating custom captions and hashtags..." }
   ];
   
   progressInterval = setInterval(() => {
