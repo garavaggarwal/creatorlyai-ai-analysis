@@ -241,6 +241,45 @@ function computeOverallScore(analysis) {
   return totalWeight > 0 ? Math.round((total / totalWeight) * 10) / 10 : null;
 }
 
+// ─── Gemini Diagnostic endpoint ───────────────────────────────────────────────
+app.get('/api/debug-gemini', async (req, res) => {
+  const result = {
+    env_key_set: !!process.env.GEMINI_API_KEY,
+    env_key_prefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 8) + '...' : 'NOT SET',
+    gemini_model_env: process.env.GEMINI_MODEL || '(not set, using default gemini-2.0-flash)',
+    node_version: process.version,
+    models_tried: [],
+  };
+
+  const modelsToTest = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+
+  for (const modelName of modelsToTest) {
+    const modelResult = { model: modelName };
+    try {
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      // Race against a 20s timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout after 20s')), 20000)
+      );
+      const responsePromise = model.generateContent('Reply with the single word: OK');
+      const resp = await Promise.race([responsePromise, timeoutPromise]);
+      modelResult.status = 'success';
+      modelResult.response = resp.response.text().slice(0, 50);
+    } catch (err) {
+      modelResult.status = 'error';
+      modelResult.error = err.message;
+      modelResult.error_type = err.constructor?.name;
+    }
+    result.models_tried.push(modelResult);
+    if (modelResult.status === 'success') break;
+  }
+
+  res.json(result);
+});
+
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Creatorly Video Lab API', timestamp: new Date().toISOString() });

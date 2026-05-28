@@ -284,10 +284,12 @@ function getNicheRules(reelType) {
 }
 
 // ─── Model fallback chain ─────────────────────────────────────────────────────
+// NOTE: gemini-1.5-flash is DEPRECATED and removed — using it causes 404 "Error fetching"
 const MODEL_FALLBACKS = [
   process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash-preview-05-20',
 ].filter((v, i, a) => a.indexOf(v) === i);
 
 // Wrap a Gemini call with a hard timeout using Promise.race
