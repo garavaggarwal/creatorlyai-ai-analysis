@@ -206,7 +206,7 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
             timestamps: [ts],
             filename: filename,
             folder: outputDir,
-            size: '720x?',
+            size: '480x?',
           })
           .on('end', () => {
             if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 0) {

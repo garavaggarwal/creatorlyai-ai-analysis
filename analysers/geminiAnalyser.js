@@ -285,10 +285,8 @@ function getNicheRules(reelType) {
 
 // ─── Model fallback chain ─────────────────────────────────────────────────────
 const MODEL_FALLBACKS = [
-  process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  'gemini-2.5-flash',
+  process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
 ].filter((v, i, a) => a.indexOf(v) === i);
 
@@ -395,13 +393,10 @@ async function analyseWithGemini(ffmpegData, caption, hashtags, niche) {
       return analysis;
     } catch (err) {
       lastError = err;
-      const isServiceError = err.message?.includes('503') ||
-                             err.message?.includes('429') ||
-                             err.message?.includes('overloaded') ||
-                             err.message?.includes('not found') ||
-                             err.message?.includes('404');
-      if (isServiceError) {
-        console.warn(`Model ${modelName} unavailable. Trying next...`);
+      // Allow fallback for all errors except fatal authorization / client setup issues
+      const isFatalAuth = err.message?.includes('API key') || err.message?.includes('403') || err.message?.includes('INVALID_ARGUMENT');
+      if (!isFatalAuth) {
+        console.warn(`Model ${modelName} failed (${err.message}). Trying next fallback...`);
         continue;
       }
       throw err;
