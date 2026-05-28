@@ -251,7 +251,7 @@ app.get('/api/debug-gemini', async (req, res) => {
     models_tried: [],
   };
 
-  const modelsToTest = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  const modelsToTest = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
 
   for (const modelName of modelsToTest) {
     const modelResult = { model: modelName };
