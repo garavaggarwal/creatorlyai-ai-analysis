@@ -106,6 +106,14 @@ function buildAnalysisPrompt(computed, caption, hashtags, niche, classification)
 
   return `You are an expert Instagram Reels analyst and creator coach. A creator has submitted their reel for a full analysis. Your job is to give them the kind of honest, specific, actionable feedback that a top creator coach would give — not generic advice, but real observations tied to what you can actually see in these frames and hear in the attached audio track.
 
+CRITICAL SCORING INSTRUCTIONS (MUST READ FIRST):
+1. DO NOT copy the scores (like 7.5, 6.5, 7.0, 9) from the JSON structure example below. They are purely placeholder defaults. You must replace them with your actual evaluated score from 1.0 to 10.0 based on the video frames and audio track.
+2. Be highly critical and realistic. Do not give everything a generic 7.0 or keep scores constant. If a category is poor (e.g. poor lighting, shaky camera, muffled or missing voice, boring pacing), score it appropriately low (e.g. 2.0 to 5.0).
+3. Tailor scores to the classified reel type:
+   - For a singing or performance reel, a static camera or a single long cut is appropriate. Do not penalize the Editing score; give it a high score (e.g. 8.5+) if the focus remains correctly on the performance.
+   - For cinematic or vlog reels, background music and ambient sounds are key. Do not penalize the Audio score if there is no speech, as long as the music fits the mood.
+   - For faceless reels, on-screen text and retention are key. Audio voice quality is not critical; do not penalize if there is no voice, grade the sound design/background music selection instead.
+
 REEL CONTEXT:
 - Type: ${reelType.replace(/_/g, ' ')} (hook style: ${hookType.replace(/_/g, ' ')})
 - Creator's intent: ${creatorIntent || 'not specified'}

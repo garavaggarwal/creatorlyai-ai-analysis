@@ -161,6 +161,8 @@ async function fetchCredits() {
     document.getElementById('creditsCount').textContent = `${used} used / ${limit} available`;
     document.getElementById('creditsFill').style.width = pct + '%';
     creditsBar.hidden = false;
+    const historyCtaCard = document.getElementById('historyCtaCard');
+    if (historyCtaCard) historyCtaCard.hidden = false;
   } catch (_) {}
 }
 
@@ -206,6 +208,9 @@ const pasteUrlBtn  = document.getElementById('pasteUrlBtn');
 let selectedFile = null;
 let activeTab = 'upload'; // 'upload' | 'link'
 let currentVideoUrl = null; // Object URL for the uploaded video (current session only)
+let activeXhr = null;
+let activeAbortController = null;
+let wasCancelled = false;
 
 /* ── Tab switching ── */
 tabUpload.addEventListener('click', () => switchTab('upload'));
@@ -286,9 +291,7 @@ function formatBytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-analyseForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
+async function startAnalysis() {
   const niche = document.getElementById('nicheInput').value;
   showProgress();
   if (activeTab === 'upload') {
@@ -319,6 +322,7 @@ analyseForm.addEventListener('submit', async (e) => {
 
       data = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        activeXhr = xhr;
         xhr.open('POST', `${API_BASE}/api/analyse`);
         xhr.timeout = 300000;
         if (authToken) xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
@@ -348,6 +352,7 @@ analyseForm.addEventListener('submit', async (e) => {
         };
         xhr.onerror   = () => reject(new Error('network'));
         xhr.ontimeout = () => reject(new Error('network'));
+        xhr.onabort   = () => reject(new Error('cancelled'));
         xhr.send(formData);
       });
 
@@ -358,19 +363,31 @@ analyseForm.addEventListener('submit', async (e) => {
       const headers = { 'Content-Type': 'application/json' };
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
+      const controller = new AbortController();
+      activeAbortController = controller;
+
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
       try {
         const resp = await fetch(`${API_BASE}/api/analyse-url`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ url, niche, caption: '', hashtags: '' }),
-          signal: AbortSignal.timeout(300000),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         const json = await resp.json();
         data = { ok: resp.ok, status: resp.status, data: json };
-      } catch (_) {
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('cancelled');
+        }
         throw new Error('network');
       }
     }
+
+    activeXhr = null;
+    activeAbortController = null;
 
     // Upgrade the in-flight entry with the record_id once we have it
     if (data?.data?.record_id) {
@@ -399,7 +416,12 @@ analyseForm.addEventListener('submit', async (e) => {
     }, 450);
 
   } catch (err) {
+    activeXhr = null;
+    activeAbortController = null;
     clearProgressInterval();
+    if (wasCancelled || err.message === 'cancelled') {
+      return;
+    }
     if (err.message === 'network') {
       await tryRecoverResult();
     } else {
@@ -407,6 +429,11 @@ analyseForm.addEventListener('submit', async (e) => {
       showError(err.message || 'Something went wrong. Please try again.');
     }
   }
+}
+
+analyseForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  startAnalysis();
 });
 
 /* ── Recovery: poll /api/result/:id after network drop / screen lock ── */
@@ -916,8 +943,34 @@ function resetUI() {
   if (currentVideoUrl) { URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = null; }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-retryBtn.addEventListener('click', resetUI);
+retryBtn.addEventListener('click', () => {
+  errorCard.hidden = true;
+  startAnalysis();
+});
 analyseAnotherBtn.addEventListener('click', resetUI);
+
+const errorAnalyseAnotherBtn = document.getElementById('errorAnalyseAnotherBtn');
+if (errorAnalyseAnotherBtn) {
+  errorAnalyseAnotherBtn.addEventListener('click', resetUI);
+}
+
+const cancelAnalysisBtn = document.getElementById('cancelAnalysisBtn');
+if (cancelAnalysisBtn) {
+  cancelAnalysisBtn.addEventListener('click', () => {
+    wasCancelled = true;
+    if (activeXhr) {
+      activeXhr.abort();
+      activeXhr = null;
+    }
+    if (activeAbortController) {
+      activeAbortController.abort();
+      activeAbortController = null;
+    }
+    localStorage.removeItem('creatorly_inflight');
+    resetUI();
+    wasCancelled = false;
+  });
+}
 
 /* ── Dynamic Progress & Step animation ── */
 let progressInterval = null;

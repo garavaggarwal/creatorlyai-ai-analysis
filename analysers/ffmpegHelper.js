@@ -125,33 +125,37 @@ function extractThumbnail(videoPath) {
 async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
   const timestamps = new Set(); // Stores integer deciseconds (tenths of a second)
 
-  // 1. Hook region: First 5 seconds — every 0.2s (dense hook coverage)
-  const hookEnd = Math.min(5, duration);
-  for (let t = 0; t <= hookEnd; t += 0.2) {
+  // Determine start/end bounds based on user request:
+  // - First 5s or 20% of start (whichever is larger) broken in 0.1s frames
+  // - End part 20% also in 0.1s frames
+  const startDuration = Math.max(5, duration * 0.2);
+  const endDuration = duration * 0.2;
+  const startEnd = startDuration;
+  const endStart = Math.max(startEnd, duration - endDuration);
+
+  // 1. Hook / Start region (whichever is larger: first 5s or 20%): every 0.1s
+  const hookEnd = Math.min(startEnd, duration);
+  for (let t = 0; t <= hookEnd; t += 0.1) {
     timestamps.add(Math.round(t * 10));
   }
 
-  // 2. Middle region: After 5 seconds — adaptive 1.0s or 2.0s interval
-  if (duration > 8) {
-    const midEnd = duration - 3;
-    const step = duration <= 60 ? 1.0 : 2.0;
-    for (let t = 5.0; t <= midEnd; t += step) {
+  // 2. Middle region: every 1.0s
+  if (endStart > hookEnd) {
+    for (let t = hookEnd; t <= endStart; t += 1.0) {
       timestamps.add(Math.round(t * 10));
     }
   }
 
-  // 3. Scene change timestamps & midpoints (exact cut points from FFmpeg selection)
+  // 3. Scene change timestamps & midpoints (helpful transition indicators)
   if (sceneTimestamps && sceneTimestamps.length > 0) {
     sceneTimestamps.forEach(t => {
       timestamps.add(Math.round(t * 10));
     });
-    // Add midpoints between consecutive scene cuts
     const sortedScenes = [...sceneTimestamps].sort((a, b) => a - b);
     for (let i = 0; i < sortedScenes.length - 1; i++) {
       const mid = (sortedScenes[i] + sortedScenes[i + 1]) / 2;
       timestamps.add(Math.round(mid * 10));
     }
-    // Midpoint from last scene cut to end
     if (sortedScenes.length > 0) {
       const lastCut = sortedScenes[sortedScenes.length - 1];
       const mid = (lastCut + duration) / 2;
@@ -159,31 +163,30 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
     }
   }
 
-  // 4. Ending region: Last 3 seconds — every 0.3s (catches reveals, punchlines, CTAs)
-  if (duration > 0) {
-    const startEnd = Math.max(0, duration - 3);
-    for (let t = startEnd; t <= duration; t += 0.3) {
+  // 4. Ending region: Last 20% of video: every 0.1s
+  if (duration > endStart) {
+    for (let t = endStart; t <= duration; t += 0.1) {
       timestamps.add(Math.round(t * 10));
     }
     // Always include the very last frame (with a slight offset)
     timestamps.add(Math.round((duration - 0.05) * 10));
   }
 
-  // Deduplicate within 0.2s of each other (2 deciseconds threshold)
+  // Deduplicate within 0.1s of each other (1 decisecond threshold)
   const sorted = [...timestamps].sort((a, b) => a - b);
   const deduped = [];
   for (const ds of sorted) {
-    if (deduped.length === 0 || ds - deduped[deduped.length - 1] >= 2) {
+    if (deduped.length === 0 || ds - deduped[deduped.length - 1] >= 1) {
       deduped.push(ds);
     }
   }
 
-  // Clamp to valid range, map back to seconds, and limit to 75 max frames
+  // Clamp to valid range, map back to seconds, and limit to 120 max frames
   const validTimestamps = deduped
     .map(ds => ds / 10)
     .map(t => Math.min(t, duration - 0.05))
     .filter(t => t >= 0)
-    .slice(0, 75);
+    .slice(0, 120);
 
   console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t.toFixed(1) + 's').join(', ')}`);
 

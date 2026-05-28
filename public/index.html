@@ -63,14 +63,22 @@
   <!-- ── MAIN ── -->
   <main class="main">
 
+    <!-- ── HISTORY CTA CARD ── -->
+    <div class="history-cta-card" id="historyCtaCard" hidden>
+      <div class="history-cta-card-content">
+        <div class="history-cta-card-icon">📊</div>
+        <div class="history-cta-card-text">
+          <h4>Looking for your previous reels?</h4>
+          <p>Access all your past video analyses and reports in one place.</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-outline" onclick="navigateTo('history')">View History</button>
+    </div>
+
     <!-- ── CREDITS BAR ── -->
     <div class="credits-bar" id="creditsBar" hidden>
       <div class="credits-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <span class="credits-label">Credits &middot; <span class="credits-count" id="creditsCount" style="font-weight: normal; color: var(--text-muted);">0 used / 5 available</span></span>
-        <button class="credits-history-cta" type="button" onclick="navigateTo('history')" style="background: none; border: none; color: #a855f7; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: all 0.2s;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          History
-        </button>
       </div>
       <div class="credits-track">
         <div class="credits-fill" id="creditsFill" style="width:0%"></div>
@@ -235,6 +243,10 @@
           <span class="step-text-v2">Assembling dashboard</span>
         </div>
       </div>
+      <!-- Cancel Button -->
+      <button type="button" class="btn btn-outline" id="cancelAnalysisBtn" style="margin-top: 28px; width: 100%; max-width: 220px; justify-content: center; margin-left: auto; margin-right: auto;">
+        Cancel Analysis
+      </button>
     </div>
 
     <!-- ── RESULTS ── -->
@@ -326,7 +338,7 @@
         </button>
         <a href="/rate-card" class="btn btn-primary" id="determineRateCardBtn" style="flex: 1; max-width: 220px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-          Determine Rate Card
+          Generate Your Rate Card
         </a>
       </div>
 
@@ -344,7 +356,10 @@
       </div>
       <h3 class="error-title">Analysis failed</h3>
       <p class="error-msg" id="errorMsg"></p>
-      <button class="btn btn-outline" id="retryBtn">Try Again</button>
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px; margin: 24px auto 0;">
+        <button class="btn btn-primary" id="retryBtn" style="width: 100%; justify-content: center;">Try Again</button>
+        <button class="btn btn-outline" id="errorAnalyseAnotherBtn" style="width: 100%; justify-content: center;">Analyse Another Reel</button>
+      </div>
     </div>
 
   </main>

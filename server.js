@@ -145,7 +145,8 @@ function cleanupFiles(videoPath, framesDir, audioPath) {
 
 // ─── Score aggregator ────────────────────────────────────────────────────────
 function computeOverallScore(analysis) {
-  const weights = {
+  // Default weights mapping
+  let weights = {
     hook: 0.20,
     retention: 0.15,
     content_structure: 0.15,
@@ -157,6 +158,75 @@ function computeOverallScore(analysis) {
     hashtags: 0.05,
     compliance: 0.03,
   };
+
+  const reelType = analysis._reel_type || analysis.reel_type || '';
+
+  if (reelType === 'singing' || reelType === 'music_performance') {
+    weights = {
+      audio_quality: 0.35,     // Voice/instrument clarity is crucial
+      visual_quality: 0.15,
+      hook: 0.15,
+      retention: 0.15,
+      content_structure: 0.08,
+      caption: 0.05,
+      editing: 0.03,           // Minimal/no cuts expected — editing doesn't penalize much
+      text_subtitles: 0.02,
+      hashtags: 0.02,
+      compliance: 0.03,
+    };
+  } else if (reelType === 'cinematic') {
+    weights = {
+      visual_quality: 0.35,    // Visual framing/grading is primary
+      editing: 0.15,           // Composition transition pacing
+      audio_quality: 0.15,     // Music/ambient sound design
+      retention: 0.10,
+      hook: 0.10,
+      content_structure: 0.05,
+      caption: 0.04,
+      text_subtitles: 0.02,
+      hashtags: 0.02,
+      compliance: 0.02,
+    };
+  } else if (reelType === 'meme' || reelType === 'comedy') {
+    weights = {
+      retention: 0.25,         // Comedic payoff / pacing
+      hook: 0.25,              // Immediate joke hook
+      editing: 0.15,           // Comedic timing
+      content_structure: 0.15,
+      audio_quality: 0.05,     // Lower audio requirements
+      visual_quality: 0.05,     // Lower visual quality requirements
+      caption: 0.05,
+      text_subtitles: 0.05,
+      hashtags: 0.02,
+      compliance: 0.03,
+    };
+  } else if (reelType === 'faceless_text') {
+    weights = {
+      text_subtitles: 0.25,    // Subtitle readability is primary
+      hook: 0.25,
+      retention: 0.20,
+      content_structure: 0.10,
+      caption: 0.08,
+      editing: 0.05,
+      visual_quality: 0.03,    // Stock/static footage
+      audio_quality: 0.02,
+      hashtags: 0.02,
+      compliance: 0.02,
+    };
+  } else if (reelType === 'talking_head' || reelType === 'educational') {
+    weights = {
+      hook: 0.25,
+      retention: 0.20,
+      content_structure: 0.20, // Teaching value density
+      audio_quality: 0.12,     // Speaking clarity is key
+      text_subtitles: 0.08,    // Explanatory subtitles
+      editing: 0.05,
+      visual_quality: 0.05,
+      caption: 0.05,
+      hashtags: 0.02,
+      compliance: 0.03,
+    };
+  }
 
   let total = 0;
   let totalWeight = 0;
