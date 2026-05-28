@@ -9,7 +9,7 @@
     "postinstall": "mkdir -p /app/bin && (pip3 install -q --target /app/yt-dlp-pkg yt-dlp && ln -sf /app/yt-dlp-pkg/bin/yt-dlp /app/bin/yt-dlp) || (pip install -q --target /app/yt-dlp-pkg yt-dlp && ln -sf /app/yt-dlp-pkg/bin/yt-dlp /app/bin/yt-dlp) || python3 -m pip install -q yt-dlp || true"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/generative-ai": "^0.24.1",
     "apify-client": "^2.23.3",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",

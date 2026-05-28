@@ -181,12 +181,13 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
     }
   }
 
-  // Clamp to valid range, map back to seconds, and limit to 120 max frames
+  // Clamp to valid range, map back to seconds, and limit to 30 max frames
+  // 30 frames is optimal for Gemini — enough visual coverage without payload timeout
   const validTimestamps = deduped
     .map(ds => ds / 10)
     .map(t => Math.min(t, duration - 0.05))
     .filter(t => t >= 0)
-    .slice(0, 120);
+    .slice(0, 30);
 
   console.log(`   Extracting ${validTimestamps.length} frames at: ${validTimestamps.map(t => t.toFixed(1) + 's').join(', ')}`);
 
@@ -206,7 +207,7 @@ async function extractFrames(videoPath, duration, outputDir, sceneTimestamps) {
             timestamps: [ts],
             filename: filename,
             folder: outputDir,
-            size: '480x?',
+            size: '360x?',
           })
           .on('end', () => {
             if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 0) {

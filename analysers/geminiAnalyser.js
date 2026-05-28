@@ -290,22 +290,41 @@ const MODEL_FALLBACKS = [
   'gemini-1.5-flash',
 ].filter((v, i, a) => a.indexOf(v) === i);
 
+// Wrap a Gemini call with a hard timeout using Promise.race
+// Compatible with all SDK versions (no AbortSignal needed)
+function withTimeout(promise, ms, label) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`timeout after ${ms / 1000}s (${label})`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 async function callWithRetry(modelName, parts, retries = 2) {
   const model = genAI.getGenerativeModel({ model: modelName });
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       console.log(`   -> Trying model: ${modelName} (attempt ${attempt})`);
-      const result = await model.generateContent(parts);
+      const result = await withTimeout(
+        model.generateContent(parts),
+        90_000,
+        `${modelName} attempt ${attempt}`
+      );
       return result.response.text();
     } catch (err) {
-      const isRetryable = err.message?.includes('503') ||
-                          err.message?.includes('429') ||
-                          err.message?.includes('overloaded') ||
-                          err.message?.includes('high demand') ||
-                          err.message?.includes('Service Unavailable');
+      const msg = err.message || '';
+      const isRetryable =
+        msg.includes('503') ||
+        msg.includes('429') ||
+        msg.includes('overloaded') ||
+        msg.includes('high demand') ||
+        msg.includes('Service Unavailable') ||
+        msg.includes('timeout') ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('ETIMEDOUT') ||
+        msg.includes('network');
       if (isRetryable && attempt < retries) {
-        const delay = attempt * 3000;
-        console.log(`   Retrying in ${delay / 1000}s...`);
+        const delay = attempt * 4000;
+        console.log(`   Retrying in ${delay / 1000}s... (${msg.slice(0, 80)})`);
         await new Promise(r => setTimeout(r, delay));
       } else {
         throw err;
