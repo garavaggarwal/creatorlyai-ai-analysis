@@ -1,18 +1,3 @@
-/* ── Typewriter ── */
-const phrases = ['will actually go viral', 'is algorithm-ready', 'will stop the scroll', 'has viral potential'];
-let pIdx = 0, cIdx = 0, deleting = false;
-const typedEl = document.getElementById('typedText');
-
-function typeLoop() {
-  const cur = phrases[pIdx];
-  typedEl.textContent = deleting ? cur.substring(0, cIdx - 1) : cur.substring(0, cIdx + 1);
-  deleting ? cIdx-- : cIdx++;
-  let delay = deleting ? 38 : 62;
-  if (!deleting && cIdx === cur.length) { delay = 2400; deleting = true; }
-  else if (deleting && cIdx === 0) { deleting = false; pIdx = (pIdx + 1) % phrases.length; delay = 350; }
-  setTimeout(typeLoop, delay);
-}
-
 /* ── Particles ── */
 function createParticles() {
   const c = document.getElementById('bgParticles');
@@ -58,9 +43,9 @@ function animateStats() {
 
 /* ── Demo ring + bars animation ── */
 const demoScores = [
-  [9.1, 8.3, 7.8, 6.5, 8.7, 7.2],
-  [7.2, 9.0, 8.5, 7.8, 6.9, 8.1],
-  [8.8, 7.5, 9.2, 8.0, 7.4, 6.8],
+  [9.1, 8.3, 7.2],
+  [7.2, 9.0, 8.1],
+  [8.8, 7.5, 6.8],
 ];
 const demoVerdicts = ['Excellent', 'Good', 'Excellent'];
 const demoCaptions = [
@@ -90,7 +75,7 @@ function runDemoAnimation() {
   scoreEl.textContent = '0';
   verdictEl.textContent = 'Analysing...';
   perfEl.textContent = '';
-  captionEl.textContent = '';
+  if (captionEl) captionEl.textContent = '';
 
   // Reset bars
   document.querySelectorAll('.demo-bar-fill-anim').forEach(b => { b.style.width = '0'; });
@@ -110,7 +95,7 @@ function runDemoAnimation() {
       scoreEl.textContent = overall;
       verdictEl.textContent = overall >= 8 ? 'Excellent' : overall >= 6.5 ? 'Good' : 'Average';
       perfEl.textContent = overall >= 8 ? '🔥 Viral Potential' : overall >= 6.5 ? '⬆️ Above Average' : '➡️ Average';
-      captionEl.textContent = demoCaptions[demoIdx % demoCaptions.length];
+      if (captionEl) captionEl.textContent = demoCaptions[demoIdx % demoCaptions.length];
     }
   }
   requestAnimationFrame(tick);
@@ -189,7 +174,6 @@ function initTilt() {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
-  typeLoop();
   createParticles();
   initNavbar();
   initReveal();
