@@ -53,7 +53,7 @@
         <a href="/login" class="nav-link">Reel Analyser</a>
       </div>
       <div class="nav-actions">
-        <a href="/rate-card" class="btn-nav-primary" id="navCta">Create Rate Card</a>
+        <a href="/login" class="btn-nav-primary" id="navCta">Login / Sign Up</a>
       </div>
     </div>
   </nav>
@@ -80,7 +80,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
       <a href="/login" class="btn-hero-secondary" id="heroSecondaryCta">
-        <span>Try the AI reel check</span>
+        <span>Check reel virality</span>
       </a>
     </div>
 
@@ -298,9 +298,9 @@
       if (typeof isLoggedIn !== 'function') return;
       if (!isLoggedIn()) return;
 
-      // 1. Add a user avatar next to the nav CTA
-      const navActions = document.querySelector('.nav-actions');
-      if (navActions) {
+      // 1. Swap the nav "Login / Sign Up" button for a user avatar
+      const navCta = document.getElementById('navCta');
+      if (navCta) {
         const user = typeof getUser === 'function' ? getUser() : null;
         const name = user ? (typeof getUserDisplayName === 'function' ? getUserDisplayName(user) : user.email) : 'Creator';
         const initial = name.charAt(0).toUpperCase();
@@ -310,7 +310,7 @@
         avatar.textContent = initial;
         avatar.title = name;
         avatar.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;font-weight:600;font-size:14px;text-decoration:none;flex-shrink:0;';
-        navActions.prepend(avatar);
+        navCta.replaceWith(avatar);
       }
 
       // 2. Secondary analyser CTAs go straight to the analyser instead of login
