@@ -292,8 +292,10 @@ function clearFile() {
 /* ── Duplicate filename detection (same user, same filename, already completed) ── */
 const duplicateFileBanner = document.getElementById('duplicateFileBanner');
 const duplicateFileDate   = document.getElementById('duplicateFileDate');
+const duplicateFileNameEl = document.getElementById('duplicateFileName');
 const viewPrevResultBtn   = document.getElementById('viewPrevResultBtn');
 const dismissDuplicateBtn = document.getElementById('dismissDuplicateBtn');
+const analyseAnywayBtn    = document.getElementById('analyseAnywayBtn');
 
 function checkDuplicateFilename(filename) {
   if (!duplicateFileBanner || !filename) return;
@@ -302,7 +304,8 @@ function checkDuplicateFilename(filename) {
     hideDuplicateBanner();
     return;
   }
-  duplicateFileDate.textContent = ` (${formatRelativeDate(match.createdAt)})`;
+  duplicateFileNameEl.textContent = filename;
+  duplicateFileDate.textContent = formatRelativeDate(match.createdAt);
   duplicateFileBanner.hidden = false;
   duplicateFileBanner.dataset.recordId = match.id;
 }
@@ -324,6 +327,13 @@ if (viewPrevResultBtn) {
 if (dismissDuplicateBtn) {
   dismissDuplicateBtn.addEventListener('click', () => hideDuplicateBanner());
 }
+if (analyseAnywayBtn) {
+  analyseAnywayBtn.addEventListener('click', () => hideDuplicateBanner());
+}
+// Click on the backdrop (not the card itself) also dismisses the popup
+duplicateFileBanner?.addEventListener('click', (e) => {
+  if (e.target === duplicateFileBanner) hideDuplicateBanner();
+});
 function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
