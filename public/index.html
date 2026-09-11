@@ -119,6 +119,14 @@
               <button type="button" class="remove-btn" id="removeFile">✕</button>
             </div>
           </div>
+          <div class="duplicate-file-banner" id="duplicateFileBanner" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            <span class="duplicate-file-text">You've already analysed this video<span id="duplicateFileDate"></span>.</span>
+            <div class="duplicate-file-actions">
+              <button type="button" class="duplicate-file-btn duplicate-file-btn-primary" id="viewPrevResultBtn">View Previous Result</button>
+              <button type="button" class="duplicate-file-btn" id="dismissDuplicateBtn">Analyse Anyway</button>
+            </div>
+          </div>
         </div>
 
         <!-- ── Panel: Instagram Link ── -->

@@ -278,13 +278,51 @@ function setFile(file) {
   // Create object URL for video playback in results
   if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   currentVideoUrl = URL.createObjectURL(file);
+  checkDuplicateFilename(file.name);
 }
 function clearFile() {
   selectedFile = null;
   videoInput.value = '';
   filePreview.hidden = true;
   updateSubmitBtn();
+  hideDuplicateBanner();
   // Don't revoke here — we need it for results playback
+}
+
+/* ── Duplicate filename detection (same user, same filename, already completed) ── */
+const duplicateFileBanner = document.getElementById('duplicateFileBanner');
+const duplicateFileDate   = document.getElementById('duplicateFileDate');
+const viewPrevResultBtn   = document.getElementById('viewPrevResultBtn');
+const dismissDuplicateBtn = document.getElementById('dismissDuplicateBtn');
+
+function checkDuplicateFilename(filename) {
+  if (!duplicateFileBanner || !filename) return;
+  const match = (historyData || []).find(item => item.status === 'completed' && item.filename === filename);
+  if (!match) {
+    hideDuplicateBanner();
+    return;
+  }
+  duplicateFileDate.textContent = ` (${formatRelativeDate(match.createdAt)})`;
+  duplicateFileBanner.hidden = false;
+  duplicateFileBanner.dataset.recordId = match.id;
+}
+
+function hideDuplicateBanner() {
+  if (!duplicateFileBanner) return;
+  duplicateFileBanner.hidden = true;
+  delete duplicateFileBanner.dataset.recordId;
+}
+
+if (viewPrevResultBtn) {
+  viewPrevResultBtn.addEventListener('click', () => {
+    const recordId = duplicateFileBanner.dataset.recordId;
+    if (!recordId) return;
+    hideDuplicateBanner();
+    loadHistoryResult(recordId);
+  });
+}
+if (dismissDuplicateBtn) {
+  dismissDuplicateBtn.addEventListener('click', () => hideDuplicateBanner());
 }
 function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
