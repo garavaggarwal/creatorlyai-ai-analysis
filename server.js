@@ -76,6 +76,7 @@ app.use(cors({
       allowed.includes(origin) ||
       origin.endsWith('.vercel.app') ||
       origin.endsWith('.up.railway.app') ||
+      origin.endsWith('.onrender.com') ||
       origin.includes('creatorlyai')
     ) {
       return callback(null, true);
